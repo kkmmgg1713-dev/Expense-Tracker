@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="스마트 가계부 아이콘">
+  <rect width="512" height="512" rx="96" fill="#4a90e2"/>
+  <rect x="112" y="92" width="268" height="328" rx="34" fill="#ffffff"/>
+  <rect x="148" y="148" width="196" height="24" rx="12" fill="#4a90e2"/>
+  <rect x="148" y="208" width="132" height="18" rx="9" fill="#d6e9ff"/>
+  <rect x="148" y="258" width="172" height="18" rx="9" fill="#d6e9ff"/>
+  <rect x="148" y="308" width="112" height="18" rx="9" fill="#d6e9ff"/>
+  <circle cx="350" cy="352" r="78" fill="#27ae60"/>
+  <path d="M350 306v92M318 330c8-19 56-20 64 3 5 16-8 26-32 28-25 2-38 12-31 28 8 20 58 18 66-4" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
+</svg>
