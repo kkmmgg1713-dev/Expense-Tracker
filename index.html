@@ -1,0 +1,2710 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="수입, 지출, 예산, 자산을 한 곳에서 관리하는 모바일 가계부입니다.">
+    <meta name="theme-color" content="#172033">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="스마트 가계부">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>스마트 가계부 모바일</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --income: #27ae60;
+            --expense: #e74c3c;
+            --bg: #f4f5f7;
+            --card: #ffffff;
+            --text: #1a1a2e;
+            --text-sub: #6c757d;
+            --border: #e9ecef;
+            --radius: 14px;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            --bottom-nav-h: 60px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 12px 12px calc(var(--bottom-nav-h) + 20px) 12px;
+            font-size: 15px;
+            overflow-x: hidden;
+        }
+
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+            font-size: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            color: var(--text);
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #fff;
+        }
+
+        /* Header */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 4px 14px;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* Month Selector */
+        .month-selector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 10px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+        }
+
+        .month-nav-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 10px;
+            background: #f1f3f5;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .month-nav-btn:active {
+            background: #dee2e6;
+        }
+
+        .month-display {
+            font-size: 18px;
+            font-weight: 800;
+            min-width: 130px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .month-display input[type="month"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+        }
+
+        .dash-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--text-sub);
+        }
+
+        .dash-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .dash-grid.three-cols {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .dash-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+
+        .dash-label {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+
+        .dash-value {
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .dash-value.income {
+            color: var(--income);
+        }
+
+        .dash-value.expense {
+            color: var(--expense);
+        }
+
+        /* Section Card */
+        .section-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .section-card.sec-income {
+            background: #dcedc8;
+        }
+
+        .section-card.sec-variable {
+            background: #ffe0b2;
+        }
+
+        .section-card.sec-personal {
+            background: #bbdefb;
+        }
+
+        .section-card.sec-common {
+            background: #e1bee7;
+        }
+
+        .section-card.sec-assets {
+            background: #b3e5fc;
+        }
+
+        .section-hdr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .sec-income .section-hdr {
+            border-bottom: 1px solid #9ccc65;
+        }
+
+        .sec-variable .section-hdr {
+            border-bottom: 1px solid #ffb74d;
+        }
+
+        .sec-personal .section-hdr {
+            border-bottom: 1px solid #64b5f6;
+        }
+
+        .sec-common .section-hdr {
+            border-bottom: 1px solid #ba68c8;
+        }
+
+        .sec-assets .section-hdr {
+            border-bottom: 1px solid #4fc3f7;
+        }
+
+        .section-hdr-left {
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .section-hdr-right {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--primary);
+        }
+
+        .section-body {
+            padding: 0;
+        }
+
+        .section-body.collapsed {
+            display: none;
+        }
+
+        /* Row Item */
+        .row-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .row-item:last-child {
+            border-bottom: none;
+        }
+
+        .row-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .row-fields.three {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .row-item input,
+        .row-item select {
+            font-size: 13px;
+            padding: 6px 8px;
+            height: 34px;
+        }
+
+        .row-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* Budget Item */
+        .budget-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        .budget-item:last-child {
+            border-bottom: none;
+        }
+
+        .budget-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .budget-name {
+            font-weight: 700;
+            font-size: 14px;
+            border: none;
+            background: transparent;
+            text-align: left;
+            padding: 4px 0;
+            width: 50%;
+        }
+
+        .budget-name:focus {
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+        }
+
+        .budget-amt-input {
+            width: 45%;
+            text-align: right;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 6px 8px;
+            height: 34px;
+        }
+
+        .budget-bar-wrap {
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 6px 0 4px;
+        }
+
+        .budget-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .budget-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .budget-over {
+            color: var(--expense) !important;
+            font-weight: 700;
+        }
+
+        /* Buttons */
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-add {
+            width: 100%;
+            background: #e7f1ff;
+            color: var(--primary);
+            border: 1px dashed var(--primary);
+            padding: 10px;
+            margin: 0;
+            border-radius: 0 0 var(--radius) var(--radius);
+        }
+
+        .btn-del {
+            background: #ff6b6b;
+            color: #fff;
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .toolbar .btn {
+            flex: 1;
+            min-width: 0;
+            font-size: 12px;
+            padding: 10px 6px;
+        }
+
+        .install-panel {
+            background: #eef6ff;
+            border: 1px solid #cfe5ff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .install-title {
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .install-status {
+            color: var(--text-sub);
+            font-size: 12px;
+            line-height: 1.45;
+            margin-bottom: 10px;
+        }
+
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--bottom-nav-h);
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            z-index: 100;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-sub);
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item span {
+            font-size: 20px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card);
+            width: 100%;
+            max-height: 90vh;
+            border-radius: 20px 20px 0 0;
+            padding: 20px 16px calc(var(--bottom-nav-h) + 16px);
+            overflow-y: auto;
+            animation: slideUp 0.25s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header strong {
+            font-size: 16px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        /* Calculator */
+        .calc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .calc-btn {
+            padding: 16px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            background: #f1f3f5;
+        }
+
+        .calc-btn:active {
+            transform: scale(0.95);
+        }
+
+        .calc-btn.op {
+            background: #d0ebff;
+            color: #1864ab;
+        }
+
+        .calc-btn.eq {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .calc-btn.clear {
+            background: #ff8787;
+            color: #fff;
+        }
+
+        .calc-display {
+            width: 100%;
+            min-height: 60px;
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 12px;
+            text-align: right;
+            padding: 10px 14px;
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            overflow: hidden;
+        }
+
+        .calc-prev {
+            font-size: 13px;
+            color: #868e96;
+        }
+
+        .calc-current {
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .calc-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .calc-actions .btn {
+            flex: 1;
+            padding: 14px;
+            font-size: 15px;
+        }
+
+        /* Chart */
+        .chart-section {
+            margin-bottom: 14px;
+        }
+
+        .chart-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .chart-tab {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .chart-tab.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .chart-canvas-wrap {
+            position: relative;
+            width: 100%;
+            height: 420px;
+        }
+
+        .chart-canvas-wrap.doughnut-wrap {
+            height: 320px;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            justify-content: center;
+            padding: 10px 8px 4px;
+            font-size: 12px;
+        }
+
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chart-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Note toggle */
+        .btn-note-icon {
+            background: #f1f3f5;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .btn-note-icon.has-note {
+            background: #fff3cd;
+            border-color: #f39c12;
+        }
+
+        .note-row {
+            display: none;
+            padding-top: 6px;
+        }
+
+        .note-row.show {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* Recurring */
+        .rec-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .rec-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rec-meta {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+
+        /* Tabs for views */
+        .view-tab {
+            display: none;
+        }
+
+        .view-tab.active {
+            display: block;
+        }
+
+        /* Warning colors */
+        .warn-yellow {
+            background: #fffbf0 !important;
+            border-left: 3px solid #f39c12;
+        }
+
+        .warn-red {
+            background: #fff5f5 !important;
+            border-left: 3px solid #e74c3c;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
+        .badge-warn {
+            background: #f39c12;
+            color: #fff;
+        }
+
+        .badge-over {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        /* Help */
+        .help-body h3 {
+            color: var(--primary);
+            border-left: 3px solid var(--primary);
+            padding-left: 8px;
+            margin: 16px 0 8px;
+            font-size: 14px;
+        }
+
+        .help-body ul {
+            padding-left: 18px;
+            font-size: 13px;
+        }
+
+        .help-body li {
+            margin-bottom: 6px;
+        }
+
+        /* Numpad Modal */
+        .numpad-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 300;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .numpad-overlay.active {
+            display: flex;
+        }
+
+        .numpad-content {
+            background: var(--card);
+            width: 100%;
+            border-radius: 20px 20px 0 0;
+            padding: 16px 16px 20px;
+            animation: slideUp 0.25s ease-out;
+        }
+
+        .numpad-display {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            text-align: right;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: monospace;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .numpad-btn {
+            padding: 16px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            background: #f1f3f5;
+            transition: transform 0.1s, background 0.1s;
+        }
+
+        .numpad-btn:active {
+            transform: scale(0.95);
+            background: #dee2e6;
+        }
+
+        .numpad-btn.back {
+            background: #ffe0b2;
+            color: #e65100;
+            font-size: 20px;
+        }
+
+        .numpad-btn.clear {
+            background: #ff8787;
+            color: #fff;
+        }
+
+        .numpad-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .numpad-actions .btn {
+            flex: 1;
+            padding: 14px;
+            font-size: 15px;
+        }
+
+        /* Design B: professional compact theme */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #172033;
+            --primary-soft: #24324b;
+            --income: #16a34a;
+            --expense: #dc2626;
+            --bg: #e8edf2;
+            --card: #ffffff;
+            --text: #111827;
+            --text-sub: #64748b;
+            --border: #dfe5ee;
+            --radius: 12px;
+            --shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+            --bottom-nav-h: 64px;
+        }
+
+        body {
+            background: var(--bg);
+            padding: 14px 12px calc(var(--bottom-nav-h) + 18px);
+            color: var(--text);
+        }
+
+        .app-header,
+        .month-selector,
+        .view-tab {
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .app-header {
+            background: var(--primary-dark);
+            border-radius: 18px 18px 0 0;
+            padding: 18px 18px 10px;
+            margin-top: 4px;
+        }
+
+        .app-title {
+            color: #ffffff;
+            font-size: 17px;
+            letter-spacing: 0;
+        }
+
+        .app-title::after {
+            content: "월별 예산 관리";
+            display: block;
+            color: #9fb1cf;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 3px;
+        }
+
+        .app-header .btn-sm {
+            background: var(--primary-soft) !important;
+            color: #dbeafe !important;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            min-width: 44px;
+            height: 34px;
+        }
+
+        .month-selector {
+            background: var(--primary-dark);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0 0 18px 18px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
+            padding: 8px 16px 16px;
+        }
+
+        .month-nav-btn {
+            background: var(--primary-soft);
+            color: #dbeafe;
+            width: 42px;
+            height: 38px;
+            border-radius: 12px;
+            font-size: 15px;
+        }
+
+        .month-display {
+            color: #ffffff;
+            font-size: 22px;
+            min-width: 156px;
+        }
+
+        .dashboard,
+        .section-card,
+        .install-panel {
+            border: 1px solid var(--border);
+            box-shadow: none;
+            border-radius: var(--radius);
+            background: var(--card);
+        }
+
+        .dashboard {
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .dash-title {
+            color: var(--text-sub);
+            font-size: 12px;
+            letter-spacing: 0;
+            margin-bottom: 10px;
+        }
+
+        .dash-grid {
+            gap: 8px;
+        }
+
+        .dash-item {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 10px;
+        }
+
+        .dash-label {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .dash-value {
+            font-size: 16px;
+            color: var(--text);
+        }
+
+        .monthly-dashboard {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .monthly-balance-card {
+            padding: 16px 18px 14px;
+            background: #ffffff;
+        }
+
+        .monthly-balance-value {
+            font-size: 28px;
+            line-height: 1.15;
+            font-weight: 900;
+            letter-spacing: 0;
+            margin-bottom: 14px;
+        }
+
+        .monthly-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .metric-chip {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 8px;
+        }
+
+        .metric-label {
+            color: var(--text-sub);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 14px;
+            font-weight: 900;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .metric-value.income {
+            color: var(--income);
+        }
+
+        .metric-value.expense {
+            color: var(--expense);
+        }
+
+        #yAssets {
+            color: #7c3aed;
+        }
+
+        .yearly-dashboard .dash-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .section-card {
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .section-card.sec-income,
+        .section-card.sec-variable,
+        .section-card.sec-personal,
+        .section-card.sec-common,
+        .section-card.sec-assets {
+            background: #ffffff;
+        }
+
+        .section-card.sec-income {
+            border-left: 4px solid var(--income);
+        }
+
+        .section-card.sec-variable {
+            border-left: 4px solid #f97316;
+        }
+
+        .section-card.sec-personal {
+            border-left: 4px solid var(--primary);
+        }
+
+        .section-card.sec-common {
+            border-left: 4px solid #7c3aed;
+        }
+
+        .section-card.sec-assets {
+            border-left: 4px solid #0891b2;
+        }
+
+        .section-hdr {
+            background: #ffffff;
+            padding: 12px 14px;
+        }
+
+        .section-hdr-left,
+        .section-hdr-right {
+            font-size: 13px;
+        }
+
+        .recent-list {
+            padding: 4px 12px 12px;
+        }
+
+        .recent-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 11px 2px;
+            border-bottom: 1px solid #eef2f7;
+        }
+
+        .recent-row:last-child {
+            border-bottom: none;
+        }
+
+        .recent-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 3px;
+        }
+
+        .recent-meta {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .recent-amount {
+            font-size: 13px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .recent-amount.income {
+            color: var(--income);
+        }
+
+        .recent-amount.expense {
+            color: var(--expense);
+        }
+
+        .empty-state {
+            padding: 18px 14px;
+            text-align: center;
+            color: var(--text-sub);
+            font-size: 13px;
+        }
+
+        .budget-summary-row {
+            padding: 11px 14px;
+            border-bottom: 1px solid #eef2f7;
+        }
+
+        .budget-summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .budget-summary-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .budget-summary-name {
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .budget-summary-amount {
+            color: var(--text-sub);
+            white-space: nowrap;
+        }
+
+        input,
+        select,
+        textarea {
+            background: #f8fafc;
+            border-color: var(--border);
+            border-radius: 9px;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .btn {
+            border-radius: 9px;
+        }
+
+        .btn-primary,
+        .btn-add,
+        .calc-btn.eq,
+        .chart-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-add {
+            border-style: solid;
+            border-radius: 0;
+        }
+
+        .btn-del {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .bottom-nav {
+            left: 50%;
+            right: auto;
+            width: min(100%, 480px);
+            transform: translateX(-50%);
+            height: var(--bottom-nav-h);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 18px 18px 0 0;
+            box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .nav-item {
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .nav-item span {
+            font-size: 18px;
+            margin-bottom: 1px;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .modal-content,
+        .numpad-content {
+            max-width: 480px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .calc-btn,
+        .numpad-btn {
+            background: #f1f5f9;
+            border-radius: 12px;
+        }
+
+        .calc-display,
+        .numpad-display {
+            background: #f8fafc;
+            color: var(--text);
+        }
+
+        .auth-panel {
+            max-width: 480px;
+            margin: 0 auto 12px;
+            padding: 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .auth-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .auth-status {
+            margin-top: 3px;
+            font-size: 12px;
+            line-height: 1.35;
+            color: var(--text-sub);
+        }
+
+        .auth-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .auth-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 9px 12px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .auth-login {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .auth-logout {
+            background: #eef2f7;
+            color: var(--text);
+        }
+
+        .auth-panel[data-state="signed-in"] {
+            border-color: #bbf7d0;
+        }
+
+        .auth-panel[data-state="error"] {
+            border-color: #fecaca;
+        }
+
+        @media (max-width: 420px) {
+            .auth-panel {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .auth-actions,
+            .auth-btn {
+                width: 100%;
+            }
+        }
+
+        @media (min-width: 520px) {
+            body {
+                padding-top: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <div class="app-header">
+        <div class="app-title">스마트 가계부</div>
+        <button class="btn btn-sm" style="background:#6c5ce7;color:#fff;" onclick="openModal('helpModal')">❓</button>
+    </div>
+
+    <div class="auth-panel" id="authPanel" data-state="loading">
+        <div>
+            <div class="auth-title" id="authTitle">로그인 확인 중</div>
+            <div class="auth-status" id="authStatus">Firebase 연결을 준비하고 있습니다.</div>
+        </div>
+        <div class="auth-actions">
+            <button class="auth-btn auth-login" id="loginBtn" onclick="loginWithGoogle()" hidden>Google 로그인</button>
+            <button class="auth-btn auth-logout" id="logoutBtn" onclick="logoutFirebase()" hidden>로그아웃</button>
+        </div>
+    </div>
+
+    <!-- Month Selector -->
+    <div class="month-selector">
+        <button class="month-nav-btn" onclick="changeMonthByArrow(-1)">◀</button>
+        <div class="month-display"
+            onclick="this.querySelector('input').showPicker ? this.querySelector('input').showPicker() : this.querySelector('input').click()">
+            <span id="monthDisplayText">2025년 1월</span>
+            <input type="month" id="monthPicker" onchange="changeMonth()">
+        </div>
+        <button class="month-nav-btn" onclick="changeMonthByArrow(1)">▶</button>
+    </div>
+
+    <!-- Bottom Navigation (tab switcher) -->
+    <div class="bottom-nav">
+        <button class="nav-item active" data-tab="home" onclick="switchTab('home',this)"><span>🏠</span>홈</button>
+        <button class="nav-item" data-tab="detail" onclick="switchTab('detail',this)"><span>📝</span>내역</button>
+        <button class="nav-item" data-tab="chart" onclick="switchTab('chart',this)"><span>📊</span>차트</button>
+        <button class="nav-item" data-tab="more" onclick="switchTab('more',this)"><span>⚙️</span>더보기</button>
+    </div>
+
+    <!-- TAB: Home -->
+    <div id="tab-home" class="view-tab active">
+        <!-- Monthly Dashboard -->
+        <div class="dashboard monthly-dashboard">
+            <div class="monthly-balance-card">
+                <div class="dash-title"><span id="currentMonthLabel">1월</span> 월 잔액</div>
+                <div class="monthly-balance-value" id="mBalance">0원</div>
+                <div class="monthly-metrics">
+                    <div class="metric-chip">
+                        <div class="metric-label">수입</div>
+                        <div class="metric-value income" id="mIncome">0원</div>
+                    </div>
+                    <div class="metric-chip">
+                        <div class="metric-label">지출</div>
+                        <div class="metric-value expense" id="mExpense">0원</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Yearly Dashboard -->
+        <div class="dashboard yearly-dashboard">
+            <div class="dash-title"><span id="yearlyLabel">2025</span> 연간 누적</div>
+            <div class="dash-grid">
+                <div class="dash-item">
+                    <div class="dash-label">연간 수입</div>
+                    <div class="dash-value income" id="yIncome">0원</div>
+                </div>
+                <div class="dash-item">
+                    <div class="dash-label">연간 지출</div>
+                    <div class="dash-value expense" id="yExpense">0원</div>
+                </div>
+                <div class="dash-item">
+                    <div class="dash-label">연간 잔액</div>
+                    <div class="dash-value" id="yBalance">0원</div>
+                </div>
+                <div class="dash-item">
+                    <div class="dash-label">유동자산</div>
+                    <div class="dash-value" id="yAssets">0원</div>
+                </div>
+            </div>
+        </div>
+        <!-- Recent Entries -->
+        <div class="section-card recent-card">
+            <div class="section-hdr" onclick="switchTab('detail', null)">
+                <div class="section-hdr-left">최근 입력</div>
+                <div class="section-hdr-right">내역 보기 ▸</div>
+            </div>
+            <div class="recent-list" id="recentEntriesHome"></div>
+        </div>
+        <!-- Quick Budget Summary -->
+        <div class="section-card">
+            <div class="section-hdr" onclick="switchTab('budget', null)">
+                <div class="section-hdr-left"><span id="budgetYearHome"></span>년 예산 요약</div>
+                <div class="section-hdr-right">자세히 ▸</div>
+            </div>
+            <div class="section-body" id="budgetSummaryHome"></div>
+        </div>
+    </div>
+
+    <!-- TAB: Budget -->
+    <div id="tab-budget" class="view-tab">
+        <div class="section-card">
+            <div class="section-hdr">
+                <div class="section-hdr-left">💰 <span id="budgetYearDisplay">2025</span>년 예산</div>
+                <div class="section-hdr-right" id="budgetTotal">0원</div>
+            </div>
+            <div class="section-body" id="budgetBody"></div>
+            <button class="btn btn-add" onclick="addCategory()">+ 예산항목 추가</button>
+        </div>
+    </div>
+
+    <!-- TAB: Detail -->
+    <div id="tab-detail" class="view-tab" id="sectionsContainer"></div>
+
+    <!-- TAB: Chart -->
+    <div id="tab-chart" class="view-tab">
+        <div class="section-card chart-section">
+            <div class="section-hdr">
+                <div class="section-hdr-left">📊 <span id="chartYearLabel">2025</span>년 분석</div>
+            </div>
+            <div style="padding: 12px 16px;">
+                <div class="chart-tabs">
+                    <button class="chart-tab active" onclick="switchChartTab('monthly',this)">월별</button>
+                    <button class="chart-tab" onclick="switchChartTab('category',this)">항목별</button>
+                    <button class="chart-tab" onclick="switchChartTab('budget',this)">예산대비</button>
+                </div>
+                <div class="chart-canvas-wrap" id="chartCanvasWrap">
+                    <canvas id="mainChart"></canvas>
+                </div>
+                <div class="chart-legend" id="chartLegend"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: More -->
+    <div id="tab-more" class="view-tab">
+        <div class="install-panel">
+            <div class="install-title">📲 앱으로 설치</div>
+            <div class="install-status" id="installStatus">설치 가능 여부를 확인하는 중입니다.</div>
+            <button id="installAppBtn" class="btn btn-primary" style="width:100%" onclick="installApp()">앱 설치하기</button>
+        </div>
+        <div class="toolbar" style="flex-direction:column;">
+            <button class="btn" style="background:#e74c3c;color:#fff;width:100%" onclick="resetCurrentMonth()">🗑️ 현재 월
+                데이터 초기화</button>
+            <button class="btn" style="background:#343a40;color:#fff;width:100%" onclick="copyPrevMonth()">📑 전월 데이터
+                복사</button>
+            <button class="btn" style="background:#6f42c1;color:#fff;width:100%"
+                onclick="openModal('recurringModal')">🔁 반복 내역 설정</button>
+            <button class="btn" style="background:#00b894;color:#fff;width:100%" onclick="exportData()">💾 JSON
+                백업</button>
+            <button class="btn" style="background:#0984e3;color:#fff;width:100%"
+                onclick="document.getElementById('fileInput').click()">📂 JSON 복구</button>
+            <button class="btn" style="background:#17a2b8;color:#fff;width:100%" onclick="exportCSV()">📊 CSV
+                내보내기</button>
+            <button class="btn" style="background:#6c5ce7;color:#fff;width:100%" onclick="openModal('helpModal')">❓
+                사용법</button>
+        </div>
+        <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importData(event)">
+
+    </div>
+
+    <!-- Modals -->
+    <div id="recurringModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <strong>🔁 반복 내역 설정</strong>
+                <button class="modal-close" onclick="closeModal('recurringModal')">✖</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+                <select id="recSection">
+                    <option value="income">수입</option>
+                    <option value="variable">지출-변동비</option>
+                    <option value="personal">지출-개인고정비</option>
+                    <option value="common">지출-공통고정비</option>
+                </select>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <input type="text" id="recItem" placeholder="항목명">
+                    <select id="recCategory">
+                        <option value="">카테고리(선택)</option>
+                    </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                    <input type="text" id="recAmount" class="input-amount" placeholder="금액"
+                        onfocus="handleAmountFocus(this)" onblur="formatNumber(this)" oninput="formatNumber(this)">
+                    <input type="month" id="recStartMonth">
+                    <input type="month" id="recEndMonth" placeholder="종료(선택)">
+                </div>
+                <textarea id="recNote" placeholder="비고(선택)" style="min-height:50px;resize:vertical;"></textarea>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn" style="background:#6f42c1;color:#fff;flex:1" onclick="addRecurringRule()">+ 규칙
+                        추가</button>
+                    <button class="btn" style="background:#20c997;color:#fff;flex:1"
+                        onclick="applyRecurringRulesForCurrentMonth(true,true)">이번 달 적용</button>
+                </div>
+            </div>
+            <div id="recurringRulesList"></div>
+        </div>
+    </div>
+
+    <div id="calcModal" class="modal-overlay">
+        <div class="modal-content" style="max-height:none;padding-bottom:20px;">
+            <div class="modal-header">
+                <strong>🧮 계산기</strong>
+                <button class="modal-close" onclick="closeModal('calcModal')">✖</button>
+            </div>
+            <div id="calcDisplay" class="calc-display">
+                <div class="calc-current">0</div>
+            </div>
+            <div class="calc-grid">
+                <button class="calc-btn clear" onclick="calcClear()">C</button>
+                <button class="calc-btn op" onclick="calcInput('/')">÷</button>
+                <button class="calc-btn op" onclick="calcInput('*')">×</button>
+                <button class="calc-btn clear" onclick="calcBack()">←</button>
+                <button class="calc-btn" onclick="calcInput('7')">7</button>
+                <button class="calc-btn" onclick="calcInput('8')">8</button>
+                <button class="calc-btn" onclick="calcInput('9')">9</button>
+                <button class="calc-btn op" onclick="calcInput('-')">-</button>
+                <button class="calc-btn" onclick="calcInput('4')">4</button>
+                <button class="calc-btn" onclick="calcInput('5')">5</button>
+                <button class="calc-btn" onclick="calcInput('6')">6</button>
+                <button class="calc-btn op" onclick="calcInput('+')">+</button>
+                <button class="calc-btn" onclick="calcInput('1')">1</button>
+                <button class="calc-btn" onclick="calcInput('2')">2</button>
+                <button class="calc-btn" onclick="calcInput('3')">3</button>
+                <button class="calc-btn eq" onclick="calculateResult()" style="grid-row:span 2">=</button>
+                <button class="calc-btn" onclick="calcInput('0')" style="grid-column:span 2">0</button>
+                <button class="calc-btn" onclick="calcInput('.')">.</button>
+            </div>
+            <div class="calc-actions">
+                <button class="btn" style="background:#868e96;color:#fff" onclick="closeModal('calcModal')">닫기</button>
+                <button class="btn" style="background:#27ae60;color:#fff" onclick="applyCalculator()">입력</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="numpadModal" class="numpad-overlay" onclick="if(event.target===this)closeNumpad()">
+        <div class="numpad-content">
+            <div id="numpadDisplay" class="numpad-display">0</div>
+            <div class="numpad-grid">
+                <button class="numpad-btn" onclick="numpadInput('1')">1</button>
+                <button class="numpad-btn" onclick="numpadInput('2')">2</button>
+                <button class="numpad-btn" onclick="numpadInput('3')">3</button>
+                <button class="numpad-btn" onclick="numpadInput('4')">4</button>
+                <button class="numpad-btn" onclick="numpadInput('5')">5</button>
+                <button class="numpad-btn" onclick="numpadInput('6')">6</button>
+                <button class="numpad-btn" onclick="numpadInput('7')">7</button>
+                <button class="numpad-btn" onclick="numpadInput('8')">8</button>
+                <button class="numpad-btn" onclick="numpadInput('9')">9</button>
+                <button class="numpad-btn clear" onclick="numpadClear()">C</button>
+                <button class="numpad-btn" onclick="numpadInput('0')">0</button>
+                <button class="numpad-btn back" onclick="numpadBack()">←</button>
+            </div>
+            <div class="numpad-actions">
+                <button class="btn" style="background:#868e96;color:#fff" onclick="closeNumpad()">취소</button>
+                <button class="btn" style="background:#27ae60;color:#fff" onclick="applyNumpad()">입력</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="helpModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <strong>📘 사용 가이드</strong>
+                <button class="modal-close" onclick="closeModal('helpModal')">✖</button>
+            </div>
+            <div class="help-body">
+                <h3>1. 데이터 저장 및 백업</h3>
+                <ul>
+                    <li>☁️ 로그인하면 데이터가 Firebase에 실시간 저장됩니다.</li>
+                    <li>💾 브라우저에는 동기화 백업 사본이 함께 저장됩니다.</li>
+                    <li>📥 [더보기] 탭에서 JSON 백업/복구가 가능합니다.</li>
+                    <li>💻 같은 Google 계정으로 로그인한 PC와 스마트폰이 동일한 데이터를 공유합니다.</li>
+                </ul>
+                <h3>2. 예산 관리</h3>
+                <ul>
+                    <li>💰 [예산] 탭에서 연간 예산을 카테고리별로 설정하세요.</li>
+                    <li>🚦 80% 사용 시 주의(노랑), 100% 초과 시 경고(빨강) 표시</li>
+                </ul>
+                <h3>3. 수입/지출 입력</h3>
+                <ul>
+                    <li>📝 [내역] 탭에서 수입/지출 내역을 입력합니다.</li>
+                    <li>🧮 금액 옆 계산기 버튼으로 계산 후 자동입력이 가능합니다.</li>
+                </ul>
+                <h3>4. 편리한 기능</h3>
+                <ul>
+                    <li>📑 [더보기] → 전월 복사로 지난달 내역을 복사</li>
+                    <li>🔁 [더보기] → 반복 설정으로 매월 자동 생성</li>
+                    <li>📊 [차트] 탭에서 시각화된 분석을 확인하세요.</li>
+                </ul>
+                <h3>5. 앱 설치</h3>
+                <ul>
+                    <li>📲 [더보기] 탭의 앱 설치 버튼으로 휴대폰 또는 PC에 설치할 수 있습니다.</li>
+                    <li>🍎 iPhone/iPad는 Safari 공유 버튼 → 홈 화면에 추가를 선택하세요.</li>
+                    <li>🔒 설치 기능은 localhost 또는 HTTPS 주소에서 열었을 때 활성화됩니다.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (window.Chart && window.ChartDataLabels) Chart.register(ChartDataLabels);
+        let currentData = { budgets: {}, months: {} };
+        let currentMonth = '';
+        let activeInputRef = null;
+        let deferredInstallPrompt = null;
+        const LEDGER_STORAGE_KEY = 'myLedgerData_v9';
+        const SYNC_CLIENT_KEY = 'myLedgerSyncClientId_v1';
+        const SYNC_CLIENT_ID = getOrCreateSyncClientId();
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyARd91AuzU8hJOyIzyFCTW1Z9PrGL-89pI",
+            authDomain: "expense-tracker-52bf4.firebaseapp.com",
+            projectId: "expense-tracker-52bf4",
+            storageBucket: "expense-tracker-52bf4.firebasestorage.app",
+            messagingSenderId: "959990299279",
+            appId: "1:959990299279:web:f6e76d235f595b74428efa",
+            measurementId: "G-S6THDWSGQJ"
+        };
+        const FIREBASE_VERSION = '12.12.1';
+        let firebaseServices = null;
+        let currentUser = null;
+        let unsubscribeLedger = null;
+        let cloudSaveTimer = null;
+        let cloudSyncEnabled = false;
+        let cloudBooted = false;
+        const SECTIONS = ['income', 'variable', 'personal', 'common'];
+        const SEC_LABELS = { income: '수입', variable: '지출-변동비', personal: '지출-개인고정비', common: '지출-공통고정비' };
+        const SEC_CONFIGS = [
+            { id: 'income', title: '수입', color: '#16a34a', hasCat: false, cls: 'sec-income' },
+            { id: 'variable', title: '변동비', color: '#f97316', hasCat: true, cls: 'sec-variable' },
+            { id: 'personal', title: '개인 고정비', color: '#2563eb', hasCat: true, cls: 'sec-personal' },
+            { id: 'common', title: '공통 고정비', color: '#7c3aed', hasCat: true, cls: 'sec-common' }
+        ];
+
+        function escapeHtml(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+        function createRuleId() { return 'rr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7); }
+        function isValidMonth(m) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(m || '')); }
+
+        function createDefaultLedgerData() {
+            const dc = ["식비", "교통/차량", "주거/통신", "생활/쇼핑", "문화/여가"];
+            const y = String(new Date().getFullYear());
+            return {
+                budgets: { [y]: dc.map(n => ({ name: n, amount: 0 })) },
+                months: {},
+                assets: [],
+                recurringRules: []
+            };
+        }
+
+        function normalizeLedgerData() {
+            if (!currentData || typeof currentData !== 'object' || Array.isArray(currentData)) currentData = createDefaultLedgerData();
+            if (Array.isArray(currentData.budgets)) {
+                const t = currentData.budgets; currentData.budgets = {};
+                const ys = new Set(); Object.keys(currentData.months || {}).forEach(k => ys.add(k.split('-')[0]));
+                if (ys.size === 0) ys.add(String(new Date().getFullYear()));
+                ys.forEach(y => { currentData.budgets[y] = JSON.parse(JSON.stringify(t)); });
+            }
+            if (!currentData.budgets || typeof currentData.budgets !== 'object' || Array.isArray(currentData.budgets)) currentData.budgets = {};
+            if (!currentData.months || typeof currentData.months !== 'object' || Array.isArray(currentData.months)) currentData.months = {};
+            if (!Array.isArray(currentData.assets)) currentData.assets = [];
+            if (!Array.isArray(currentData.recurringRules)) currentData.recurringRules = [];
+        }
+
+        function getOrCreateSyncClientId() {
+            try {
+                let id = localStorage.getItem(SYNC_CLIENT_KEY);
+                if (!id) {
+                    id = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : 'client-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+                    localStorage.setItem(SYNC_CLIENT_KEY, id);
+                }
+                return id;
+            } catch (e) {
+                return 'client-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+            }
+        }
+
+        function readLocalLedgerData() {
+            try {
+                const s = localStorage.getItem(LEDGER_STORAGE_KEY);
+                return s ? JSON.parse(s) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function writeLocalLedgerBackup() {
+            try {
+                localStorage.setItem(LEDGER_STORAGE_KEY, JSON.stringify(currentData));
+            } catch (e) {
+                console.warn('localStorage backup failed', e);
+            }
+        }
+
+        function loadData() {
+            currentData = readLocalLedgerData() || createDefaultLedgerData();
+            normalizeLedgerData();
+        }
+
+        function saveData() {
+            normalizeLedgerData();
+            writeLocalLedgerBackup();
+            queueCloudSave();
+            calculateAll();
+            renderRecentEntriesHome();
+        }
+        function ensureMonth(mk) {
+            if (!currentData.months) currentData.months = {};
+            if (!currentData.months[mk]) currentData.months[mk] = { income: [], variable: [], personal: [], common: [], assets: [] };
+            SECTIONS.forEach(s => { if (!Array.isArray(currentData.months[mk][s])) currentData.months[mk][s] = []; });
+        }
+
+        function initCurrentView(useSavedMonth = true) {
+            normalizeLedgerData();
+            if (useSavedMonth && isValidMonth(currentData.lastViewedMonth)) currentMonth = currentData.lastViewedMonth;
+            else if (!isValidMonth(currentMonth)) { const t = new Date(); currentMonth = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`; }
+            document.getElementById('monthPicker').value = currentMonth;
+            updateMonthText();
+            const c = applyRecurringToMonth(currentMonth); if (c > 0) saveData();
+            render();
+        }
+        function init() {
+            loadData();
+            initCurrentView(true);
+        }
+
+        function setAppVisible(visible) {
+            document.querySelectorAll('.month-selector, .bottom-nav, .view-tab').forEach(el => {
+                el.style.display = visible ? '' : 'none';
+            });
+        }
+
+        function setAuthUi(state, user, message) {
+            const panel = document.getElementById('authPanel');
+            const title = document.getElementById('authTitle');
+            const status = document.getElementById('authStatus');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (!panel || !title || !status || !loginBtn || !logoutBtn) return;
+            panel.dataset.state = state;
+            if (state === 'signed-in') title.textContent = user?.displayName || user?.email || '로그인됨';
+            else if (state === 'local') title.textContent = '로컬 저장 모드';
+            else if (state === 'error') title.textContent = '동기화 확인 필요';
+            else if (state === 'loading') title.textContent = '로그인 확인 중';
+            else title.textContent = '로그인이 필요합니다';
+            status.textContent = message || '';
+            loginBtn.hidden = !(state === 'signed-out' || (state === 'error' && firebaseServices));
+            logoutBtn.hidden = state !== 'signed-in';
+        }
+
+        function getUserSyncLabel(user) {
+            if (!user) return '';
+            const email = user.email || user.displayName || 'Google 계정';
+            const shortUid = user.uid ? user.uid.slice(0, 8) : '';
+            return shortUid ? `${email} / UID ${shortUid}` : email;
+        }
+
+        function getSyncTimeText() {
+            return new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        }
+
+        function getFirestoreErrorMessage(err, actionText) {
+            const code = String(err?.code || 'unknown');
+            if (code === 'permission-denied') {
+                return `${actionText} 실패: Firestore Rules 권한 문제입니다. Rules가 users/{uid}/ledger/main 경로를 허용하는지 확인해 주세요. (${code})`;
+            }
+            if (code === 'not-found' || code === 'failed-precondition') {
+                return `${actionText} 실패: Firestore Database가 기본 데이터베이스로 생성되어 있는지 확인해 주세요. (${code})`;
+            }
+            if (code === 'unavailable' || code === 'deadline-exceeded') {
+                return `${actionText} 실패: 네트워크 연결 문제입니다. 잠시 후 다시 시도해 주세요. (${code})`;
+            }
+            return `${actionText} 실패: Firebase 콘솔 설정과 네트워크를 확인해 주세요. (${code})`;
+        }
+
+        function getFirebaseModuleUrl(moduleName) {
+            return `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/${moduleName}.js`;
+        }
+
+        async function setupFirebaseSync() {
+            try {
+                const [appMod, authMod, firestoreMod] = await Promise.all([
+                    import(getFirebaseModuleUrl('firebase-app')),
+                    import(getFirebaseModuleUrl('firebase-auth')),
+                    import(getFirebaseModuleUrl('firebase-firestore'))
+                ]);
+                const app = appMod.initializeApp(FIREBASE_CONFIG);
+                const auth = authMod.getAuth(app);
+                const db = firestoreMod.getFirestore(app);
+                firebaseServices = {
+                    auth,
+                    db,
+                    GoogleAuthProvider: authMod.GoogleAuthProvider,
+                    signInWithPopup: authMod.signInWithPopup,
+                    signInWithRedirect: authMod.signInWithRedirect,
+                    getRedirectResult: authMod.getRedirectResult,
+                    signOut: authMod.signOut,
+                    onAuthStateChanged: authMod.onAuthStateChanged,
+                    doc: firestoreMod.doc,
+                    getDoc: firestoreMod.getDoc,
+                    setDoc: firestoreMod.setDoc,
+                    onSnapshot: firestoreMod.onSnapshot,
+                    serverTimestamp: firestoreMod.serverTimestamp
+                };
+                firebaseServices.getRedirectResult(auth).catch(err => console.warn('redirect sign-in result failed', err));
+                firebaseServices.onAuthStateChanged(auth, user => {
+                    if (user) startLedgerSync(user);
+                    else {
+                        stopLedgerSync();
+                        currentUser = null;
+                        setAppVisible(false);
+                        setAuthUi('signed-out', null, 'Google 로그인 후 PC와 스마트폰에서 같은 가계부를 사용합니다.');
+                    }
+                });
+                return true;
+            } catch (err) {
+                console.error('Firebase setup failed', err);
+                setAuthUi('local', null, 'Firebase SDK를 불러오지 못해 이 기기에만 저장됩니다. 인터넷 연결과 SDK 버전을 확인해 주세요.');
+                return false;
+            }
+        }
+
+        async function loginWithGoogle() {
+            if (!firebaseServices) {
+                alert('Firebase가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+                return;
+            }
+            const provider = new firebaseServices.GoogleAuthProvider();
+            setAuthUi('loading', null, 'Google 로그인 창을 여는 중입니다.');
+            try {
+                await firebaseServices.signInWithPopup(firebaseServices.auth, provider);
+            } catch (err) {
+                const code = String(err?.code || '');
+                if (code.includes('popup') || code.includes('operation-not-supported')) {
+                    try {
+                        await firebaseServices.signInWithRedirect(firebaseServices.auth, provider);
+                    } catch (redirectErr) {
+                        console.error('Google redirect sign-in failed', redirectErr);
+                        setAuthUi('error', null, getFirebaseAuthErrorMessage(redirectErr));
+                    }
+                    return;
+                }
+                console.error('Google sign-in failed', err);
+                setAuthUi('error', null, getFirebaseAuthErrorMessage(err));
+            }
+        }
+
+        function getFirebaseAuthErrorMessage(err) {
+            const code = String(err?.code || 'unknown');
+            const host = location.hostname || '현재 주소';
+            if (code === 'auth/operation-not-allowed') {
+                return 'Google 로그인이 꺼져 있습니다. Firebase 콘솔 > Authentication > 로그인 방법에서 Google 제공자를 사용 설정해 주세요. (' + code + ')';
+            }
+            if (code === 'auth/unauthorized-domain') {
+                return '현재 도메인이 Firebase 승인 도메인에 없습니다. Firebase 콘솔 > Authentication > Settings > 승인된 도메인에 ' + host + ' 를 추가해 주세요. (' + code + ')';
+            }
+            if (code === 'auth/popup-blocked') {
+                return '브라우저가 로그인 팝업을 차단했습니다. 팝업 허용 후 다시 시도해 주세요. (' + code + ')';
+            }
+            if (code === 'auth/popup-closed-by-user') {
+                return '로그인 창이 닫혔습니다. Google 로그인 버튼을 다시 눌러 주세요. (' + code + ')';
+            }
+            if (code === 'auth/network-request-failed') {
+                return '네트워크 연결 문제로 로그인하지 못했습니다. 인터넷 연결 후 다시 시도해 주세요. (' + code + ')';
+            }
+            return '로그인에 실패했습니다. Firebase Authentication의 Google 로그인과 승인 도메인을 확인해 주세요. (' + code + ')';
+        }
+
+        async function logoutFirebase() {
+            if (!firebaseServices) return;
+            await firebaseServices.signOut(firebaseServices.auth);
+        }
+
+        function stopLedgerSync() {
+            if (unsubscribeLedger) {
+                unsubscribeLedger();
+                unsubscribeLedger = null;
+            }
+            if (cloudSaveTimer) {
+                clearTimeout(cloudSaveTimer);
+                cloudSaveTimer = null;
+            }
+            cloudSyncEnabled = false;
+            cloudBooted = false;
+        }
+
+        function getLedgerDocRef(uid) {
+            return firebaseServices.doc(firebaseServices.db, 'users', uid, 'ledger', 'main');
+        }
+
+        async function startLedgerSync(user) {
+            stopLedgerSync();
+            currentUser = user;
+            cloudSyncEnabled = true;
+            setAppVisible(false);
+            setAuthUi('loading', user, '가계부 데이터를 불러오는 중입니다.');
+            const ref = getLedgerDocRef(user.uid);
+            try {
+                const firstSnap = await firebaseServices.getDoc(ref);
+                if (!firstSnap.exists()) {
+                    currentData = readLocalLedgerData() || createDefaultLedgerData();
+                    normalizeLedgerData();
+                    await firebaseServices.setDoc(ref, {
+                        data: JSON.parse(JSON.stringify(currentData)),
+                        updatedBy: SYNC_CLIENT_ID,
+                        createdAt: firebaseServices.serverTimestamp(),
+                        updatedAt: firebaseServices.serverTimestamp()
+                    }, { merge: true });
+                }
+                unsubscribeLedger = firebaseServices.onSnapshot(ref, snapshot => {
+                    if (!snapshot.exists()) return;
+                    const payload = snapshot.data() || {};
+                    if (cloudBooted && payload.updatedBy === SYNC_CLIENT_ID) {
+                        setAppVisible(true);
+                        setAuthUi('signed-in', currentUser, `클라우드 저장 확인 ${getSyncTimeText()} / 계정: ${getUserSyncLabel(currentUser)}`);
+                        return;
+                    }
+                    const remote = payload.data;
+                    currentData = remote && typeof remote === 'object' ? remote : createDefaultLedgerData();
+                    normalizeLedgerData();
+                    writeLocalLedgerBackup();
+                    setAppVisible(true);
+                    setAuthUi('signed-in', currentUser, `실시간 동기화 중입니다. 계정: ${getUserSyncLabel(currentUser)} / 수신 ${getSyncTimeText()}`);
+                    initCurrentView(!cloudBooted);
+                    cloudBooted = true;
+                }, err => {
+                    console.error('Ledger sync failed', err);
+                    setAuthUi('signed-in', currentUser, getFirestoreErrorMessage(err, '실시간 동기화'));
+                });
+            } catch (err) {
+                console.error('Ledger load failed', err);
+                cloudSyncEnabled = false;
+                setAppVisible(true);
+                setAuthUi('signed-in', user, getFirestoreErrorMessage(err, 'Firestore 연결') + ' 임시로 이 기기에만 저장됩니다.');
+                init();
+            }
+        }
+
+        function queueCloudSave() {
+            if (!cloudSyncEnabled || !firebaseServices || !currentUser) return;
+            if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+            setAuthUi('signed-in', currentUser, `클라우드 저장 중... 계정: ${getUserSyncLabel(currentUser)}`);
+            cloudSaveTimer = setTimeout(saveCloudData, 300);
+        }
+
+        async function saveCloudData() {
+            if (!cloudSyncEnabled || !firebaseServices || !currentUser) return;
+            cloudSaveTimer = null;
+            try {
+                const ref = getLedgerDocRef(currentUser.uid);
+                await firebaseServices.setDoc(ref, {
+                    data: JSON.parse(JSON.stringify(currentData)),
+                    updatedBy: SYNC_CLIENT_ID,
+                    updatedAt: firebaseServices.serverTimestamp()
+                }, { merge: true });
+                setAuthUi('signed-in', currentUser, `클라우드 저장 완료 ${getSyncTimeText()} / 계정: ${getUserSyncLabel(currentUser)}`);
+            } catch (err) {
+                console.error('Cloud save failed', err);
+                setAuthUi('signed-in', currentUser, getFirestoreErrorMessage(err, '클라우드 저장'));
+            }
+        }
+
+        async function bootApp() {
+            setAppVisible(false);
+            setAuthUi('loading', null, 'Firebase 연결 중입니다.');
+            const ok = await setupFirebaseSync();
+            if (!ok) {
+                setAppVisible(true);
+                init();
+            }
+        }
+        function updateMonthText() {
+            const [y, m] = currentMonth.split('-');
+            document.getElementById('monthDisplayText').innerText = `${y}년 ${parseInt(m)}월`;
+        }
+        function changeMonthByArrow(off) {
+            let [y, m] = currentMonth.split('-').map(Number); m += off;
+            if (m > 12) { m = 1; y++; } else if (m < 1) { m = 12; y--; }
+            currentMonth = `${y}-${String(m).padStart(2, '0')}`;
+            document.getElementById('monthPicker').value = currentMonth;
+            updateMonthText(); applyRecurringToMonth(currentMonth); render();
+            currentData.lastViewedMonth = currentMonth; saveData();
+        }
+        function changeMonth() {
+            currentMonth = document.getElementById('monthPicker').value;
+            updateMonthText(); applyRecurringToMonth(currentMonth); render();
+            currentData.lastViewedMonth = currentMonth; saveData();
+        }
+
+        function isRuleActive(rule, mk) {
+            const s = isValidMonth(rule.startMonth) ? rule.startMonth : '';
+            const e = isValidMonth(rule.endMonth) ? rule.endMonth : '';
+            if (s && mk < s) return false; if (e && mk > e) return false; return true;
+        }
+        function applyRecurringToMonth(mk) {
+            if (!isValidMonth(mk)) return 0;
+            if (!Array.isArray(currentData.recurringRules) || currentData.recurringRules.length === 0) return 0;
+            ensureMonth(mk); let added = 0;
+            currentData.recurringRules.forEach(r => {
+                if (!r || !SECTIONS.includes(r.section)) return;
+                if (!String(r.item || '').trim()) return;
+                if (!r.id) r.id = createRuleId();
+                if (!isRuleActive(r, mk)) return;
+                const list = currentData.months[mk][r.section];
+                if (list.some(row => String(row.recurringRuleId || '') === String(r.id))) return;
+                list.push({ item: String(r.item || ''), category: String(r.category || ''), amount: Number(r.amount) || 0, note: String(r.note || ''), recurringRuleId: String(r.id) });
+                added++;
+            }); return added;
+        }
+        function applyRecurringRulesForCurrentMonth(showAlert = false, commit = false) {
+            const c = applyRecurringToMonth(currentMonth);
+            if (c > 0 && commit) { saveData(); render(); }
+            if (showAlert) { if (c > 0) alert(`반복 내역 ${c}건 적용`); else alert('적용할 반복 내역 없음'); }
+            return c;
+        }
+
+        // Tab switching
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            const navEl = el || document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+            if (navEl) navEl.classList.add('active');
+            if (tabId === 'chart') { const y = currentMonth.split('-')[0]; document.getElementById('chartYearLabel').innerText = y; renderChart(currentChartType); }
+            if (tabId === 'more') renderAssets();
+        }
+
+        // Render all
+        function render() {
+            ensureMonth(currentMonth);
+            const year = currentMonth.split('-')[0];
+            if (!currentData.budgets[year] || currentData.budgets[year].length === 0) {
+                const prev = String(Number(year) - 1);
+                if (currentData.budgets[prev] && currentData.budgets[prev].length > 0)
+                    currentData.budgets[year] = JSON.parse(JSON.stringify(currentData.budgets[prev]));
+                else currentData.budgets[year] = ["식비", "교통/차량", "주거/통신", "생활/쇼핑", "문화/여가"].map(n => ({ name: n, amount: 0 }));
+                saveData();
+            }
+            renderBudget(); renderSections(); renderBudgetSummaryHome(); renderRecentEntriesHome(); calculateAll();
+        }
+
+        // Budget
+        function getSpentMap(year) {
+            const yb = currentData.budgets[year] || []; const sm = {}; yb.forEach(b => sm[b.name] = 0);
+            Object.keys(currentData.months).forEach(mk => {
+                if (mk.startsWith(year)) {
+                    const md = currentData.months[mk];
+                    ['variable', 'personal', 'common'].forEach(s => { (md[s] || []).forEach(r => { if (r.category && sm.hasOwnProperty(r.category)) sm[r.category] += (Number(r.amount) || 0); }); });
+                }
+            }); return sm;
+        }
+        function renderBudget() {
+            const year = currentMonth.split('-')[0];
+            document.getElementById('budgetYearDisplay').innerText = year;
+            const yb = currentData.budgets[year] || []; const sm = getSpentMap(year);
+            let totalB = 0, totalS = 0;
+            const body = document.getElementById('budgetBody');
+            body.innerHTML = yb.map((b, i) => {
+                const spent = sm[b.name] || 0; const bal = b.amount - spent;
+                const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
+                let warnCls = '', badge = '', barColor = '#4a90e2';
+                if (pct >= 100) { warnCls = 'warn-red'; badge = '<span class="badge badge-over">⚠️초과</span>'; barColor = '#e74c3c'; }
+                else if (pct >= 80) { warnCls = 'warn-yellow'; badge = '<span class="badge badge-warn">⚡주의</span>'; barColor = '#f39c12'; }
+                totalB += b.amount || 0; totalS += spent;
+                return `<div class="budget-item ${warnCls}">
+                <div class="budget-top">
+                    <input type="text" class="budget-name" value="${escapeHtml(b.name)}" onchange="renameCategory(${i},this.value)">
+                    ${badge}
+                    <input type="text" class="budget-amt-input" value="${(b.amount || 0).toLocaleString()}" onfocus="handleAmountFocus(this)" onblur="formatNumber(this)" oninput="formatNumber(this);updateBudgetAmount(${i},this.value,true)" onchange="updateBudgetAmount(${i},this.value)">
+                    <button class="btn-del btn-sm" onclick="deleteCategory(${i})" style="margin-left:4px">X</button>
+                </div>
+                <div class="budget-bar-wrap"><div class="budget-bar" style="width:${Math.min(pct, 100)}%;background:${barColor}"></div></div>
+                <div class="budget-info">
+                    <span>사용 ${spent.toLocaleString()}원</span>
+                    <span class="${bal < 0 ? 'budget-over' : ''}">잔액 ${bal.toLocaleString()}원</span>
+                </div>
+            </div>`;
+            }).join('');
+            document.getElementById('budgetTotal').innerText = `예산 ${totalB.toLocaleString()}원 / 사용 ${totalS.toLocaleString()}원`;
+        }
+        function renderBudgetSummaryHome() {
+            const year = currentMonth.split('-')[0];
+            document.getElementById('budgetYearHome').innerText = year;
+            const yb = currentData.budgets[year] || []; const sm = getSpentMap(year);
+            const el = document.getElementById('budgetSummaryHome');
+            if (yb.length === 0) { el.innerHTML = '<div class="empty-state">예산 항목이 없습니다</div>'; return; }
+            el.innerHTML = yb.map(b => {
+                const spent = sm[b.name] || 0; const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
+                let barColor = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#2563eb';
+                return `<div class="budget-summary-row">
+                <div class="budget-summary-top">
+                    <span class="budget-summary-name">${escapeHtml(b.name)}</span>
+                    <span class="budget-summary-amount">${spent.toLocaleString()} / ${(b.amount || 0).toLocaleString()}원</span>
+                </div>
+                <div class="budget-bar-wrap"><div class="budget-bar" style="width:${Math.min(pct, 100)}%;background:${barColor}"></div></div>
+            </div>`;
+            }).join('');
+        }
+
+        function renderRecentEntriesHome() {
+            const el = document.getElementById('recentEntriesHome');
+            if (!el) return;
+            const md = currentData.months && currentData.months[currentMonth] ? currentData.months[currentMonth] : {};
+            const entries = [];
+            SECTIONS.forEach(sec => {
+                (md[sec] || []).forEach((row, idx) => entries.push({ sec, row, idx }));
+            });
+            if (entries.length === 0) {
+                el.innerHTML = '<div class="empty-state">이번 달 입력 내역이 없습니다</div>';
+                return;
+            }
+            el.innerHTML = entries.reverse().slice(0, 4).map(({ sec, row }) => {
+                const amount = Number(row.amount) || 0;
+                const isIncome = sec === 'income';
+                const sign = isIncome ? '+' : '-';
+                const meta = [SEC_LABELS[sec], row.category, row.note].filter(Boolean).join(' · ');
+                return `<div class="recent-row">
+                    <div>
+                        <div class="recent-title">${escapeHtml(row.item || '내역 없음')}</div>
+                        <div class="recent-meta">${escapeHtml(meta || SEC_LABELS[sec])}</div>
+                    </div>
+                    <div class="recent-amount ${isIncome ? 'income' : 'expense'}">${sign}${amount.toLocaleString()}원</div>
+                </div>`;
+            }).join('');
+        }
+        function addCategory() {
+            const year = currentMonth.split('-')[0];
+            if (!currentData.budgets[year]) currentData.budgets[year] = [];
+            currentData.budgets[year].push({ name: "새 카테고리", amount: 0 }); saveData(); renderBudget(); renderBudgetSummaryHome();
+        }
+        function deleteCategory(i) {
+            const year = currentMonth.split('-')[0];
+            if (confirm('정말로 삭제하겠습니까?')) {
+                const name = currentData.budgets[year][i].name;
+                Object.keys(currentData.months).forEach(mk => { if (mk.startsWith(year)) { const m = currentData.months[mk];['variable', 'personal', 'common'].forEach(s => { (m[s] || []).forEach(r => { if (r.category === name) r.category = ''; }); }); } });
+                currentData.budgets[year].splice(i, 1); saveData(); render();
+            }
+        }
+        function renameCategory(i, newName) {
+            const year = currentMonth.split('-')[0]; const old = currentData.budgets[year][i].name;
+            if (old === newName) return; currentData.budgets[year][i].name = newName;
+            Object.keys(currentData.budgets).forEach(y => { if (y !== year) currentData.budgets[y].forEach(b => { if (b.name === old) b.name = newName; }); });
+            Object.keys(currentData.months).forEach(mk => { const m = currentData.months[mk];['variable', 'personal', 'common'].forEach(s => { (m[s] || []).forEach(r => { if (r.category === old) r.category = newName; }); }); });
+            saveData(); render();
+        }
+        function updateBudgetAmount(i, v, live = false) {
+            const year = currentMonth.split('-')[0]; const n = Number(v.replace(/,/g, ''));
+            currentData.budgets[year][i].amount = isNaN(n) ? 0 : n;
+            saveData();
+            if (live) { renderBudgetSummaryHome(); calculateAll(); return; }
+            renderBudget(); renderBudgetSummaryHome();
+        }
+
+        // Sections (income/expense)
+        function toggleNote(secId, idx) {
+            const el = document.getElementById('note-' + secId + '-' + idx);
+            if (el) el.classList.toggle('show');
+        }
+        function renderSections() {
+            const year = currentMonth.split('-')[0];
+            const yearCats = currentData.budgets[year] || [];
+            const container = document.getElementById('tab-detail');
+            container.innerHTML = SEC_CONFIGS.map(conf => {
+                const list = currentData.months[currentMonth][conf.id] || [];
+                const sub = list.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+                return `<div class="section-card ${conf.cls}">
+                <div class="section-hdr" onclick="toggleSection('sec-${conf.id}')">
+                    <div class="section-hdr-left" style="color:${conf.color}">${conf.title}</div>
+                    <div class="section-hdr-right">${sub.toLocaleString()}원</div>
+                </div>
+                <div class="section-body" id="sec-${conf.id}">
+                    ${list.map((row, i) => {
+                    const hasNote = !!(row.note && row.note.trim());
+                    return `<div class="row-item">
+                        <div style="display:grid;grid-template-columns:${conf.hasCat ? '1fr 1fr' : '1fr'};gap:5px">
+                            <input type="text" value="${escapeHtml(row.item || '')}" placeholder="사용내역" style="text-align:left" oninput="updateData('${conf.id}',${i},'item',this.value,true)" onchange="updateData('${conf.id}',${i},'item',this.value)">
+                            ${conf.hasCat ? `<select onchange="updateData('${conf.id}',${i},'category',this.value)">
+                                <option value="">예산구분</option>
+                                ${yearCats.map(b => `<option value="${escapeHtml(b.name)}" ${row.category === b.name ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
+                            </select>`: ''}
+                        </div>
+                        <div style="display:flex;gap:4px;align-items:center">
+                            <input type="text" style="text-align:right;flex:1" value="${(row.amount || 0).toLocaleString()}" readonly onclick="openNumpad(this)" onchange="updateData('${conf.id}',${i},'amount',this.value)">
+                            <button class="btn btn-sm" style="background:#e9ecef;min-width:34px;height:34px;font-size:14px;padding:0" onclick="openCalculator(this.previousElementSibling)">🧮</button>
+                            <button class="btn-note-icon ${hasNote ? 'has-note' : ''}" onclick="toggleNote('${conf.id}',${i})" title="비고" style="width:34px;height:34px;font-size:14px">📝</button>
+                            <button class="btn-del" onclick="deleteRow('${conf.id}',${i})" style="min-width:38px;height:34px;font-size:11px;padding:4px 8px">삭제</button>
+                        </div>
+                        <div class="note-row ${hasNote ? 'show' : ''}" id="note-${conf.id}-${i}" style="padding-top:4px">
+                            <input type="text" value="${escapeHtml(row.note || '')}" placeholder="비고 입력" style="flex:1;text-align:left;font-size:12px" oninput="updateData('${conf.id}',${i},'note',this.value,true)" onchange="updateData('${conf.id}',${i},'note',this.value)">
+                        </div>
+                    </div>`;
+                }).join('')}
+                </div>
+                <button class="btn btn-add" onclick="addRow('${conf.id}')">+ 내역 추가</button>
+            </div>`;
+            }).join('') + renderAssetsInDetail();
+        }
+        function toggleSection(id) { document.getElementById(id).classList.toggle('collapsed'); }
+
+        function updateData(sec, idx, field, val, live = false) {
+            let row; if (sec === 'assets') row = currentData.assets[idx];
+            else row = currentData.months[currentMonth][sec][idx];
+            if (field === 'amount') { const n = Number(val.replace(/,/g, '')); row[field] = isNaN(n) ? 0 : n; }
+            else row[field] = val;
+            saveData(); renderBudget(); renderBudgetSummaryHome();
+            if (live) { calculateAll(); return; }
+            renderSections();
+        }
+        function addRow(sec) {
+            const nr = { item: '', amount: 0, note: '', category: '' };
+            if (sec === 'assets') { if (!currentData.assets) currentData.assets = []; currentData.assets.push(nr); }
+            else currentData.months[currentMonth][sec].push(nr);
+            render(); saveData();
+        }
+        function deleteRow(sec, idx) {
+            if (!confirm('정말로 삭제하겠습니까?')) return;
+            if (sec === 'assets') { currentData.assets.splice(idx, 1); render(); saveData(); }
+            else { currentData.months[currentMonth][sec].splice(idx, 1); render(); saveData(); }
+        }
+
+        function resetCurrentMonth() {
+            if (confirm(`${currentMonth}월의 모든 내역을 초기화하시겠습니까? (유동자산 제외)`)) {
+                SECTIONS.forEach(s => currentData.months[currentMonth][s] = []);
+                saveData(); render();
+                alert('초기화되었습니다.');
+            }
+        }
+
+        // Assets - now rendered inside detail tab
+        function renderAssetsInDetail() {
+            const list = currentData.assets || [];
+            const sub = list.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+            return `<div class="section-card sec-assets">
+                <div class="section-hdr" onclick="toggleSection('sec-assets')">
+                    <div class="section-hdr-left" style="color:#0891b2">유동자산</div>
+                    <div class="section-hdr-right">${sub.toLocaleString()}원</div>
+                </div>
+                <div class="section-body" id="sec-assets">
+                    ${list.map((row, i) => {
+                const hasNote = !!(row.note && row.note.trim());
+                return `<div class="row-item">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                            <input type="text" value="${escapeHtml(row.item || '')}" placeholder="사용내역" style="text-align:left" oninput="updateData('assets',${i},'item',this.value,true)" onchange="updateData('assets',${i},'item',this.value)">
+                            <input type="text" value="${escapeHtml(row.category || '')}" placeholder="자산구분" style="text-align:left" oninput="updateData('assets',${i},'category',this.value,true)" onchange="updateData('assets',${i},'category',this.value)">
+                        </div>
+                        <div style="display:flex;gap:4px;align-items:center">
+                            <input type="text" style="text-align:right;flex:1" value="${(row.amount || 0).toLocaleString()}" readonly onclick="openNumpad(this)" onchange="updateData('assets',${i},'amount',this.value)">
+                            <button class="btn btn-sm" style="background:#e9ecef;min-width:34px;height:34px;font-size:14px;padding:0" onclick="openCalculator(this.previousElementSibling)">🧮</button>
+                            <button class="btn-note-icon ${hasNote ? 'has-note' : ''}" onclick="toggleNote('assets',${i})" title="비고" style="width:34px;height:34px;font-size:14px">📝</button>
+                            <button class="btn-del" onclick="deleteRow('assets',${i})" style="min-width:38px;height:34px;font-size:11px;padding:4px 8px">삭제</button>
+                        </div>
+                        <div class="note-row ${hasNote ? 'show' : ''}" id="note-assets-${i}" style="padding-top:4px">
+                            <input type="text" value="${escapeHtml(row.note || '')}" placeholder="비고 입력" style="flex:1;text-align:left;font-size:12px" oninput="updateData('assets',${i},'note',this.value,true)" onchange="updateData('assets',${i},'note',this.value)">
+                        </div>
+                    </div>`;
+            }).join('')}
+                </div>
+                <button class="btn btn-add" onclick="addRow('assets')">+ 자산 추가</button>
+            </div>`;
+        }
+        function renderAssets() { /* no longer needed, assets render in detail tab */ }
+
+        // Calculate
+        function calculateAll() {
+            const md = currentData.months && currentData.months[currentMonth] ? currentData.months[currentMonth] : {};
+            const sums = {};
+            ['income', 'variable', 'personal', 'common'].forEach(s => { sums[s] = (md[s] || []).reduce((a, c) => a + (Number(c.amount) || 0), 0); });
+            sums.assets = (currentData.assets || []).reduce((a, c) => a + (Number(c.amount) || 0), 0);
+            const totalExp = sums.variable + sums.personal + sums.common;
+            const bal = sums.income - totalExp;
+            document.getElementById('mIncome').innerText = sums.income.toLocaleString() + '원';
+            document.getElementById('mExpense').innerText = totalExp.toLocaleString() + '원';
+            const assetsEl = document.getElementById('yAssets');
+            if (assetsEl) assetsEl.innerText = sums.assets.toLocaleString() + '원';
+            const balEl = document.getElementById('mBalance');
+            balEl.innerText = bal.toLocaleString() + '원';
+            balEl.style.color = bal < 0 ? '#dc2626' : '#111827';
+            document.getElementById('currentMonthLabel').innerText = currentMonth.split('-')[1] + '월';
+            calcYearly();
+        }
+        function calcYearly() {
+            const year = currentMonth.split('-')[0];
+            document.getElementById('yearlyLabel').innerText = year;
+            let yI = 0, yE = 0;
+            Object.keys(currentData.months).forEach(k => {
+                if (k.startsWith(year)) {
+                    const m = currentData.months[k];
+                    yI += (m.income || []).reduce((a, c) => a + (Number(c.amount) || 0), 0);
+                    yE += ['variable', 'personal', 'common'].reduce((acc, t) => acc + (m[t] || []).reduce((a, c) => a + (Number(c.amount) || 0), 0), 0);
+                }
+            });
+            const yB = yI - yE;
+            document.getElementById('yIncome').innerText = yI.toLocaleString() + '원';
+            document.getElementById('yExpense').innerText = yE.toLocaleString() + '원';
+            const yBalEl = document.getElementById('yBalance');
+            yBalEl.innerText = yB.toLocaleString() + '원'; yBalEl.style.color = yB < 0 ? '#dc2626' : '#16a34a';
+        }
+
+        // Format
+        function formatNumber(inp) {
+            let v = inp.value.replace(/[^0-9.]/g, ''); const p = v.split('.');
+            if (p.length > 2) v = p[0] + '.' + p.slice(1).join('');
+            if (v) {
+                if (v.includes('.')) { const [i, d] = v.split('.'); inp.value = Number(i).toLocaleString() + '.' + d; }
+                else inp.value = Number(v).toLocaleString();
+            } else inp.value = '';
+        }
+        function handleAmountFocus(inp) { let r = inp.value.replace(/,/g, ''); if (r === '0') inp.value = ''; else inp.value = r; setTimeout(() => inp.select(), 10); }
+
+        // Copy prev month
+        function copyPrevMonth() {
+            const [yS, mS] = currentMonth.split('-'); let y = parseInt(yS), m = parseInt(mS);
+            const pY = m === 1 ? y - 1 : y, pM = m === 1 ? 12 : m - 1;
+            const pk = `${pY}-${String(pM).padStart(2, '0')}`;
+            if (!currentData.months[pk]) return alert('이전 달 데이터 없음');
+            if (confirm('전월 데이터를 복사할까요?')) { currentData.months[currentMonth] = JSON.parse(JSON.stringify(currentData.months[pk])); saveData(); render(); }
+        }
+
+        // Export/Import
+        function getDateStamp(d = new Date()) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+        function dlBlob(blob, fn) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = fn; a.click(); URL.revokeObjectURL(u); }
+        function exportData() { dlBlob(new Blob([JSON.stringify(currentData, null, 2)], { type: 'application/json' }), `가계부_백업_${getDateStamp()}.json`); }
+        function exportCSV() {
+            const year = currentMonth.split('-')[0]; let csv = '\uFEFF연도,월,섹션,항목,카테고리,금액,비고\n';
+            const sl = { income: '수입', variable: '지출-변동비', personal: '지출-개인고정비', common: '지출-공통고정비' };
+            Object.keys(currentData.months).forEach(mk => {
+                if (mk.startsWith(year)) {
+                    const [y, m] = mk.split('-'); const md = currentData.months[mk];
+                    Object.keys(sl).forEach(s => { (md[s] || []).forEach(r => { csv += `${y},${m},${sl[s]},"${(r.item || '').replace(/"/g, '""')}","${(r.category || '').replace(/"/g, '""')}",${r.amount || 0},"${(r.note || '').replace(/"/g, '""')}"\n`; }); });
+                }
+            });
+            const [cy, cm] = currentMonth.split('-');
+            (currentData.assets || []).forEach(r => { csv += `${cy},${cm},자산(전체),"${(r.item || '').replace(/"/g, '""')}","${(r.category || '').replace(/"/g, '""')}",${r.amount || 0},"${(r.note || '').replace(/"/g, '""')}"\n`; });
+            dlBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `가계부_${year}년_${getDateStamp()}.csv`);
+        }
+        function importData(ev) {
+            const f = ev.target.files[0]; if (!f) return; const r = new FileReader();
+            r.onload = e => {
+                try {
+                    currentData = JSON.parse(e.target.result);
+                    if (!currentData.budgets || typeof currentData.budgets !== 'object' || Array.isArray(currentData.budgets)) currentData.budgets = {};
+                    if (!currentData.months || typeof currentData.months !== 'object' || Array.isArray(currentData.months)) currentData.months = {};
+                    if (!Array.isArray(currentData.assets)) currentData.assets = [];
+                    if (!Array.isArray(currentData.recurringRules)) currentData.recurringRules = [];
+                    applyRecurringToMonth(currentMonth); saveData(); render(); alert('복구 완료!');
+                } catch (e) { alert('파일 오류'); } finally { ev.target.value = ''; }
+            };
+            r.readAsText(f);
+        }
+
+        // Recurring
+        function openRecurringModal() { openModal('recurringModal'); document.getElementById('recStartMonth').value = currentMonth; populateRecCat(); renderRecRules(); }
+        function populateRecCat() {
+            const sel = document.getElementById('recCategory'); const cv = sel.value;
+            sel.innerHTML = '<option value="">카테고리(선택)</option>';
+            const year = currentMonth.split('-')[0]; (currentData.budgets[year] || []).forEach(b => { if (b.name && b.name.trim()) { const o = document.createElement('option'); o.value = b.name; o.textContent = b.name; sel.appendChild(o); } });
+            if (cv) sel.value = cv;
+        }
+        function renderRecRules() {
+            const el = document.getElementById('recurringRulesList');
+            const rules = Array.isArray(currentData.recurringRules) ? currentData.recurringRules : [];
+            if (rules.length === 0) { el.innerHTML = '<div style="text-align:center;color:#888;padding:16px;font-size:13px">등록된 규칙 없음</div>'; return; }
+            el.innerHTML = rules.map((r, i) => {
+                const sl = SEC_LABELS[r.section] || r.section; const st = isValidMonth(r.startMonth) ? r.startMonth : '즉시'; const et = isValidMonth(r.endMonth) ? r.endMonth : '무기한';
+                return `<div class="rec-item"><div class="rec-item-header"><strong>[${escapeHtml(sl)}] ${escapeHtml(r.item || '')}</strong><button class="btn-del" onclick="deleteRecRule(${i})">삭제</button></div>
+            <div class="rec-meta">금액: ${(Number(r.amount) || 0).toLocaleString()}원 / ${st}~${et}${r.category ? ' / ' + escapeHtml(r.category) : ''}${r.note ? '<br>비고: ' + escapeHtml(r.note) : ''}</div></div>`;
+            }).join('');
+        }
+        function addRecurringRule() {
+            const sec = document.getElementById('recSection').value; const item = document.getElementById('recItem').value.trim();
+            const cat = document.getElementById('recCategory').value.trim(); const amtR = document.getElementById('recAmount').value.replace(/,/g, '').trim();
+            const sm = document.getElementById('recStartMonth').value || currentMonth; const em = document.getElementById('recEndMonth').value;
+            const note = document.getElementById('recNote').value.trim(); const amt = Number(amtR || '0');
+            if (!SECTIONS.includes(sec)) return alert('섹션 오류'); if (!item) return alert('항목 입력');
+            if (!isFinite(amt)) return alert('금액 확인'); if (!isValidMonth(sm)) return alert('시작월 확인');
+            if (em && !isValidMonth(em)) return alert('종료월 형식 오류'); if (em && em < sm) return alert('종료월이 시작월보다 빠름');
+            if (!Array.isArray(currentData.recurringRules)) currentData.recurringRules = [];
+            currentData.recurringRules.push({ id: createRuleId(), section: sec, item, category: cat, amount: amt, note, startMonth: sm, endMonth: em || '' });
+            applyRecurringToMonth(currentMonth); saveData(); render(); renderRecRules();
+            document.getElementById('recItem').value = ''; document.getElementById('recAmount').value = ''; document.getElementById('recNote').value = '';
+        }
+        function deleteRecRule(i) {
+            if (!Array.isArray(currentData.recurringRules) || !currentData.recurringRules[i]) return;
+            if (!confirm('반복 규칙을 삭제할까요?\n(생성된 내역도 제거됩니다)')) return;
+            const rid = String(currentData.recurringRules[i].id || ''); currentData.recurringRules.splice(i, 1);
+            if (rid) {
+                Object.keys(currentData.months).forEach(mk => {
+                    const md = currentData.months[mk]; if (!md) return;
+                    SECTIONS.forEach(s => { if (Array.isArray(md[s])) md[s] = md[s].filter(r => String(r.recurringRuleId || '') !== rid); });
+                });
+            }
+            saveData(); render(); renderRecRules();
+        }
+
+        // Modal
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // Numpad
+        let numpadValue = '0';
+        let numpadInputRef = null;
+        function openNumpad(inp) {
+            numpadInputRef = inp;
+            const raw = String(inp.value || '0').replace(/,/g, '').trim();
+            numpadValue = raw === '0' ? '0' : raw;
+            updateNumpadDisplay();
+            document.getElementById('numpadModal').classList.add('active');
+        }
+        function closeNumpad() {
+            document.getElementById('numpadModal').classList.remove('active');
+            numpadInputRef = null;
+        }
+        function numpadInput(v) {
+            if (numpadValue === '0') numpadValue = v;
+            else numpadValue += v;
+            updateNumpadDisplay();
+        }
+        function numpadClear() { numpadValue = '0'; updateNumpadDisplay(); }
+        function numpadBack() { numpadValue = numpadValue.length > 1 ? numpadValue.slice(0, -1) : '0'; updateNumpadDisplay(); }
+        function updateNumpadDisplay() {
+            const n = Number(numpadValue);
+            document.getElementById('numpadDisplay').textContent = isNaN(n) ? numpadValue : n.toLocaleString();
+        }
+        function applyNumpad() {
+            if (numpadInputRef) {
+                const n = Number(numpadValue) || 0;
+                numpadInputRef.value = n.toLocaleString();
+                numpadInputRef.dispatchEvent(new Event('change'));
+            }
+            closeNumpad();
+        }
+
+        // Calculator
+        let calcExpr = '';
+        function sanitizeCalc(v) { const c = String(v ?? '').replace(/,/g, '').trim(); return c || '0'; }
+        function isValidCalc(e) { if (!e || e.length > 120) return false; if (!/^[0-9+\-*/().\s]+$/.test(e)) return false; return /[0-9]/.test(e); }
+        function openCalculator(inp) { activeInputRef = inp; calcExpr = sanitizeCalc(inp.value); updateCalcDisp(); openModal('calcModal'); inp.blur(); }
+        function calcInput(v) { if (calcExpr === '0' && !['+', '-', '*', '/', '.'].includes(v)) calcExpr = v; else calcExpr += v; updateCalcDisp(); }
+        function calcClear() { calcExpr = '0'; updateCalcDisp(); }
+        function calcBack() { calcExpr = calcExpr.length > 1 ? calcExpr.slice(0, -1) : '0'; updateCalcDisp(); }
+        function calculateResult() {
+            try {
+                const se = sanitizeCalc(calcExpr); if (!isValidCalc(se)) throw new Error();
+                const res = new Function('"use strict";return(' + se + ');')(); if (!isFinite(res)) throw new Error();
+                calcExpr = String(Math.round(res * 100) / 100); updateCalcDisp();
+            } catch (e) { calcExpr = 'Error'; updateCalcDisp(); setTimeout(calcClear, 1000); }
+        }
+        function updateCalcDisp() {
+            const el = document.getElementById('calcDisplay');
+            const li = Math.max(calcExpr.lastIndexOf('+'), calcExpr.lastIndexOf('-'), calcExpr.lastIndexOf('*'), calcExpr.lastIndexOf('/'));
+            const formatCalcText = v => String(v).replace(/\d+(?:\.\d+)?/g, n => {
+                const [i, d] = n.split('.');
+                const grouped = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                return d === undefined ? grouped : grouped + '.' + d;
+            });
+            if (li > 0 && calcExpr.length > 10) el.innerHTML = `<div class="calc-prev">${formatCalcText(calcExpr.substring(0, li))}</div><div class="calc-current">${formatCalcText(calcExpr.substring(li))}</div>`;
+            else el.innerHTML = `<div class="calc-current">${formatCalcText(calcExpr)}</div>`;
+        }
+        function applyCalculator() {
+            if (activeInputRef && calcExpr !== 'Error') {
+                if (/[+\-*/]/.test(calcExpr)) calculateResult(); if (calcExpr === 'Error') return;
+                activeInputRef.value = Number(calcExpr).toLocaleString(); activeInputRef.dispatchEvent(new Event('change')); closeModal('calcModal');
+            }
+        }
+
+        // Charts
+        let chartInstance = null, currentChartType = 'monthly';
+        function switchChartTab(t, el) { currentChartType = t; document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active')); if (el) el.classList.add('active'); renderChart(t); }
+        function renderChart(t) {
+            if (!window.Chart) {
+                document.getElementById('chartCanvasWrap').style.display = 'none';
+                document.getElementById('chartLegend').innerHTML = '<div style="text-align:center;color:var(--text-sub);padding:40px 0;">차트 라이브러리를 불러오지 못했습니다. 인터넷 연결 후 다시 열어 주세요.</div>';
+                return;
+            }
+            const year = currentMonth.split('-')[0]; if (chartInstance) chartInstance.destroy();
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            document.getElementById('chartCanvasWrap').style.display = 'block';
+            if (t === 'monthly') renderMonthlyChart(ctx, year);
+            else if (t === 'category') renderCategoryChart(ctx, year);
+            else if (t === 'budget') renderBudgetChart(ctx, year);
+        }
+        function renderMonthlyChart(ctx, year) {
+            const ms = [], iD = [], eD = [];
+            for (let m = 1; m <= 12; m++) {
+                const mk = `${year}-${String(m).padStart(2, '0')}`; ms.push(`${m}월`);
+                const md = currentData.months[mk] || { income: [], variable: [], personal: [], common: [] };
+                iD.push((md.income || []).reduce((a, c) => a + (Number(c.amount) || 0), 0));
+                eD.push(['variable', 'personal', 'common'].reduce((acc, t) => acc + (md[t] || []).reduce((a, c) => a + (Number(c.amount) || 0), 0), 0));
+            }
+            document.getElementById('chartCanvasWrap').className = 'chart-canvas-wrap';
+            document.getElementById('chartLegend').innerHTML = '';
+            chartInstance = new Chart(ctx, {
+                type: 'line', data: {
+                    labels: ms, datasets: [
+                        { label: '수입', data: iD, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.1)', tension: 0.4 },
+                        { label: '지출', data: eD, borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)', tension: 0.4 }
+                    ]
+                }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, datalabels: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+        function renderCategoryChart(ctx, year) {
+            const catData = {};
+            (currentData.budgets[year] || []).forEach(b => { catData[b.name] = []; });
+            Object.keys(currentData.months).forEach(mk => {
+                if (mk.startsWith(year)) {
+                    const mNum = parseInt(mk.split('-')[1], 10);
+                    const md = currentData.months[mk];
+                    ['variable', 'personal', 'common'].forEach(s => {
+                        (md[s] || []).forEach(r => {
+                            if (r.category && catData.hasOwnProperty(r.category) && Number(r.amount) > 0) {
+                                catData[r.category].push({ month: mNum, item: r.item || '내역 없음', amount: Number(r.amount) || 0 });
+                            }
+                        });
+                    });
+                }
+            });
+            Object.values(catData).forEach(arr => arr.sort((a, b) => a.month - b.month));
+            document.getElementById('chartCanvasWrap').style.display = 'none';
+            document.getElementById('chartLegend').innerHTML = '';
+            let html = '<div style="width: 100%; max-height: 400px; overflow-y: auto; text-align: left; padding: 10px 8px; box-sizing: border-box;">';
+            let hasData = false;
+            Object.keys(catData).forEach(cat => {
+                const items = catData[cat];
+                if (items.length > 0) {
+                    hasData = true;
+                    html += `<div style="margin-bottom: 18px;">
+                        <div style="font-weight: 800; color: var(--primary); font-size: 15px; margin-bottom: 8px; border-bottom: 2px solid #e9ecef; padding-bottom: 4px;">ㅁ ${escapeHtml(cat)}</div>`;
+                    items.forEach(it => {
+                        html += `<div style="display: flex; justify-content: space-between; margin-bottom: 6px; padding-left: 6px; font-size: 14px; align-items: flex-start;">
+                            <span style="color: var(--text); flex: 1; margin-right: 12px; line-height: 1.4; word-break: keep-all;">
+                                <strong>${it.month}월</strong> ${escapeHtml(it.item)}
+                            </span>
+                            <span style="font-weight: 700; color: var(--text); flex-shrink: 0; line-height: 1.4;">
+                                ${it.amount.toLocaleString()}원
+                            </span>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                }
+            });
+            if (!hasData) html += `<div style="text-align:center;color:var(--text-sub);padding:40px 0;">항목별 내역이 없습니다.</div>`;
+            html += '</div>';
+            document.getElementById('chartLegend').innerHTML = html;
+        }
+        function renderBudgetChart(ctx, year) {
+            const yb = currentData.budgets[year] || []; const lb = [], bd = [], sd = []; const sm = {}; yb.forEach(b => sm[b.name] = 0);
+            Object.keys(currentData.months).forEach(mk => {
+                if (mk.startsWith(year)) {
+                    const md = currentData.months[mk];
+                    ['variable', 'personal', 'common'].forEach(s => { (md[s] || []).forEach(r => { if (r.category && sm.hasOwnProperty(r.category)) sm[r.category] += (Number(r.amount) || 0); }); });
+                }
+            });
+            yb.forEach(b => { lb.push(b.name); bd.push(b.amount || 0); sd.push(sm[b.name] || 0); });
+            document.getElementById('chartCanvasWrap').className = 'chart-canvas-wrap';
+            document.getElementById('chartLegend').innerHTML = '';
+            chartInstance = new Chart(ctx, {
+                type: 'bar', data: { labels: lb, datasets: [{ label: '예산', data: bd, backgroundColor: 'rgba(74,144,226,0.7)' }, { label: '사용액', data: sd, backgroundColor: 'rgba(231,76,60,0.7)' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, datalabels: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        // App install (PWA)
+        function isStandaloneApp() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        }
+        function isIosLike() {
+            const ua = window.navigator.userAgent || '';
+            return /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+        function getInstallGuideText() {
+            if (isIosLike()) return 'Safari에서 공유 버튼을 누른 뒤 홈 화면에 추가를 선택하면 앱처럼 사용할 수 있습니다.';
+            if (location.protocol === 'file:') return '앱 설치는 localhost 또는 HTTPS 주소에서 열었을 때 활성화됩니다. 로컬 서버 주소로 열어 주세요.';
+            return 'Chrome 또는 Edge 주소창의 설치 아이콘이나 브라우저 메뉴의 앱 설치/홈 화면에 추가를 사용할 수 있습니다.';
+        }
+        function updateInstallUi(customStatus) {
+            const btn = document.getElementById('installAppBtn');
+            const status = document.getElementById('installStatus');
+            if (!btn || !status) return;
+            if (isStandaloneApp()) {
+                btn.textContent = '앱으로 실행 중';
+                btn.disabled = true;
+                status.textContent = '이미 설치된 앱 화면으로 실행 중입니다.';
+                return;
+            }
+            btn.disabled = false;
+            if (deferredInstallPrompt) {
+                btn.textContent = '앱 설치하기';
+                status.textContent = customStatus || '이 기기에 앱으로 설치할 수 있습니다.';
+                return;
+            }
+            btn.textContent = isIosLike() ? 'iPhone 설치 방법 보기' : '설치 안내 보기';
+            status.textContent = customStatus || getInstallGuideText();
+        }
+        async function installApp() {
+            if (isStandaloneApp()) return;
+            if (!deferredInstallPrompt) {
+                alert(getInstallGuideText());
+                updateInstallUi();
+                return;
+            }
+            deferredInstallPrompt.prompt();
+            try {
+                await deferredInstallPrompt.userChoice;
+            } finally {
+                deferredInstallPrompt = null;
+                updateInstallUi('설치가 보이지 않으면 브라우저 메뉴의 앱 설치를 다시 확인해 주세요.');
+            }
+        }
+        function setupPwa() {
+            window.addEventListener('beforeinstallprompt', (event) => {
+                event.preventDefault();
+                deferredInstallPrompt = event;
+                updateInstallUi();
+            });
+            window.addEventListener('appinstalled', () => {
+                deferredInstallPrompt = null;
+                updateInstallUi('설치가 완료되었습니다.');
+            });
+            if ('serviceWorker' in navigator && ['http:', 'https:'].includes(location.protocol)) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./service-worker.js').catch(() => {
+                        updateInstallUi('오프라인 캐시를 준비하지 못했습니다. 설치 안내는 계속 사용할 수 있습니다.');
+                    });
+                });
+            } else {
+                updateInstallUi(getInstallGuideText());
+            }
+            updateInstallUi();
+        }
+
+        // Keyboard
+        document.addEventListener('keydown', function (e) {
+            const nm = document.getElementById('numpadModal');
+            if (nm && nm.classList.contains('active')) {
+                const k = e.key;
+                if (k >= '0' && k <= '9') { numpadInput(k); e.preventDefault(); }
+                else if (k === 'Backspace') { numpadBack(); e.preventDefault(); }
+                else if (k === 'Delete' || k.toLowerCase() === 'c') { numpadClear(); e.preventDefault(); }
+                else if (k === 'Enter') { applyNumpad(); e.preventDefault(); }
+                else if (k === 'Escape') { closeNumpad(); e.preventDefault(); }
+                return;
+            }
+            const cm = document.getElementById('calcModal');
+            if (!cm.classList.contains('active')) return;
+            const k = e.key;
+            if ((k >= '0' && k <= '9') || k === '.') { calcInput(k); e.preventDefault(); }
+            else if (['+', '-', '*', '/'].includes(k)) { calcInput(k); e.preventDefault(); }
+            else if (k === 'Backspace') { calcBack(); e.preventDefault(); }
+            else if (k === 'Delete') { calcClear(); e.preventDefault(); }
+            else if (k === 'Enter') { applyCalculator(); e.preventDefault(); }
+            else if (k === 'Escape') { closeModal('calcModal'); e.preventDefault(); }
+        });
+
+        setupPwa();
+        bootApp();
+    </script>
+</body>
+
+</html>
