@@ -18,6 +18,11 @@ const fixture = `
     setAuthUi('local', null, '화면 검증용 예시 데이터 · 실제 가계부와 연결되지 않습니다.');
 `;
 http.createServer((req, res) => {
+    if (req.url.split('?')[0] === '/styles.css') {
+        res.writeHead(200, {'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'no-store'});
+        res.end(fs.readFileSync(path.join(__dirname, '..', 'styles.css')));
+        return;
+    }
     if (req.url !== '/') { res.writeHead(404); res.end(); return; }
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8')
         .replace('const SYNC_CLIENT_ID = getOrCreateSyncClientId();', "const SYNC_CLIENT_ID = 'preview';")

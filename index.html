@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="수입, 지출, 예산, 자산을 한 곳에서 관리하는 모바일 가계부입니다.">
-    <meta name="theme-color" content="#20223a">
+    <meta name="theme-color" content="#193f3b">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="스마트 가계부">
@@ -17,1808 +17,16 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <style>
-        :root {
-            --primary: #4a90e2;
-            --income: #27ae60;
-            --expense: #e74c3c;
-            --bg: #f4f5f7;
-            --card: #ffffff;
-            --text: #1a1a2e;
-            --text-sub: #6c757d;
-            --border: #e9ecef;
-            --radius: 14px;
-            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-            --bottom-nav-h: 60px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 12px 12px calc(var(--bottom-nav-h) + 20px) 12px;
-            font-size: 15px;
-            overflow-x: hidden;
-        }
-
-        input,
-        select,
-        textarea {
-            font-family: inherit;
-            font-size: 16px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 12px;
-            background: #f8f9fa;
-            width: 100%;
-            box-sizing: border-box;
-            text-align: center;
-            color: var(--text);
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: #fff;
-        }
-
-        /* Header */
-        .app-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 4px 14px;
-        }
-
-        .app-title {
-            font-size: 18px;
-            font-weight: 800;
-            color: var(--primary);
-        }
-
-        /* Month Selector */
-        .month-selector {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            background: var(--card);
-            border-radius: var(--radius);
-            padding: 10px;
-            margin-bottom: 14px;
-            box-shadow: var(--shadow);
-        }
-
-        .month-nav-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 10px;
-            background: #f1f3f5;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .month-nav-btn:active {
-            background: #dee2e6;
-        }
-
-        .month-display {
-            font-size: 18px;
-            font-weight: 800;
-            min-width: 130px;
-            text-align: center;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .month-display input[type="month"] {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        /* Dashboard */
-        .dashboard {
-            background: var(--card);
-            border-radius: var(--radius);
-            padding: 16px;
-            margin-bottom: 14px;
-            box-shadow: var(--shadow);
-        }
-
-        .dash-title {
-            font-weight: 700;
-            font-size: 14px;
-            margin-bottom: 12px;
-            color: var(--text-sub);
-        }
-
-        .dash-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .dash-grid.three-cols {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-
-        .dash-item {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 12px 8px;
-            text-align: center;
-        }
-
-        .dash-label {
-            font-size: 11px;
-            color: var(--text-sub);
-            margin-bottom: 4px;
-        }
-
-        .dash-value {
-            font-size: 16px;
-            font-weight: 800;
-        }
-
-        .dash-value.income {
-            color: var(--income);
-        }
-
-        .dash-value.expense {
-            color: var(--expense);
-        }
-
-        /* Section Card */
-        .section-card {
-            background: var(--card);
-            border-radius: var(--radius);
-            margin-bottom: 10px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-        }
-
-        .section-card.sec-income {
-            background: #dcedc8;
-        }
-
-        .section-card.sec-variable {
-            background: #ffe0b2;
-        }
-
-        .section-card.sec-personal {
-            background: #bbdefb;
-        }
-
-        .section-card.sec-common {
-            background: #e1bee7;
-        }
-
-        .section-card.sec-assets {
-            background: #b3e5fc;
-        }
-
-        .section-hdr {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-        }
-
-        .sec-income .section-hdr {
-            border-bottom: 1px solid #9ccc65;
-        }
-
-        .sec-variable .section-hdr {
-            border-bottom: 1px solid #ffb74d;
-        }
-
-        .sec-personal .section-hdr {
-            border-bottom: 1px solid #64b5f6;
-        }
-
-        .sec-common .section-hdr {
-            border-bottom: 1px solid #ba68c8;
-        }
-
-        .sec-assets .section-hdr {
-            border-bottom: 1px solid #4fc3f7;
-        }
-
-        .section-hdr-left {
-            font-weight: 700;
-            font-size: 13px;
-        }
-
-        .section-hdr-right {
-            font-weight: 700;
-            font-size: 13px;
-            color: var(--primary);
-        }
-
-        .section-body {
-            padding: 0;
-        }
-
-        .section-body.collapsed {
-            display: none;
-        }
-
-        /* Row Item */
-        .row-item {
-            padding: 8px 12px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .row-item:last-child {
-            border-bottom: none;
-        }
-
-        .row-fields {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-        }
-
-        .row-fields.three {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-
-        .row-item input,
-        .row-item select {
-            font-size: 13px;
-            padding: 6px 8px;
-            height: 34px;
-        }
-
-        .row-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        /* Budget Item */
-        .budget-item {
-            padding: 12px 16px;
-            border-bottom: 1px solid #f1f3f5;
-        }
-
-        .budget-item:last-child {
-            border-bottom: none;
-        }
-
-        .budget-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        .budget-name {
-            font-weight: 700;
-            font-size: 14px;
-            border: none;
-            background: transparent;
-            text-align: left;
-            padding: 4px 0;
-            width: 50%;
-        }
-
-        .budget-name:focus {
-            border-bottom: 2px solid var(--primary);
-            background: transparent;
-        }
-
-        .budget-amt-input {
-            width: 45%;
-            text-align: right;
-            font-weight: 600;
-            font-size: 14px;
-            padding: 6px 8px;
-            height: 34px;
-        }
-
-        .budget-bar-wrap {
-            height: 6px;
-            background: #e9ecef;
-            border-radius: 3px;
-            overflow: hidden;
-            margin: 6px 0 4px;
-        }
-
-        .budget-bar {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.3s;
-        }
-
-        .budget-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: var(--text-sub);
-        }
-
-        .budget-over {
-            color: var(--expense) !important;
-            font-weight: 700;
-        }
-
-        /* Buttons */
-        .btn {
-            border: none;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: #fff;
-        }
-
-        .btn-add {
-            width: 100%;
-            background: #e7f1ff;
-            color: var(--primary);
-            border: 1px dashed var(--primary);
-            padding: 10px;
-            margin: 0;
-            border-radius: 0 0 var(--radius) var(--radius);
-        }
-
-        .btn-del {
-            background: #ff6b6b;
-            color: #fff;
-            padding: 6px 12px;
-            font-size: 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        .btn-sm {
-            padding: 6px 10px;
-            font-size: 12px;
-        }
-
-        /* Toolbar */
-        .toolbar {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 14px;
-        }
-
-        .toolbar .btn {
-            flex: 1;
-            min-width: 0;
-            font-size: 12px;
-            padding: 10px 6px;
-        }
-
-        .install-panel {
-            background: #eef6ff;
-            border: 1px solid #cfe5ff;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-
-        .install-title {
-            font-weight: 800;
-            color: var(--primary);
-            margin-bottom: 6px;
-        }
-
-        .install-status {
-            color: var(--text-sub);
-            font-size: 12px;
-            line-height: 1.45;
-            margin-bottom: 10px;
-        }
-
-        .btn:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-        }
-
-        /* Bottom Nav */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: var(--bottom-nav-h);
-            background: var(--card);
-            border-top: 1px solid var(--border);
-            display: flex;
-            z-index: 100;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .nav-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-            font-size: 10px;
-            font-weight: 600;
-            color: var(--text-sub);
-            cursor: pointer;
-            border: none;
-            background: none;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-        }
-
-        .nav-item span {
-            font-size: 20px;
-        }
-
-        /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 200;
-            align-items: flex-end;
-            justify-content: center;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: var(--card);
-            width: 100%;
-            max-height: 90vh;
-            border-radius: 20px 20px 0 0;
-            padding: 20px 16px calc(var(--bottom-nav-h) + 16px);
-            overflow-y: auto;
-            animation: slideUp 0.25s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-            }
-
-            to {
-                transform: translateY(0);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .modal-header strong {
-            font-size: 16px;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            color: #888;
-        }
-
-        /* Calculator */
-        .calc-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        .calc-btn {
-            padding: 16px 0;
-            border: none;
-            border-radius: 10px;
-            font-size: 20px;
-            font-weight: 700;
-            cursor: pointer;
-            background: #f1f3f5;
-        }
-
-        .calc-btn:active {
-            transform: scale(0.95);
-        }
-
-        .calc-btn.op {
-            background: #d0ebff;
-            color: #1864ab;
-        }
-
-        .calc-btn.eq {
-            background: var(--primary);
-            color: #fff;
-        }
-
-        .calc-btn.clear {
-            background: #ff8787;
-            color: #fff;
-        }
-
-        .calc-display {
-            width: 100%;
-            min-height: 60px;
-            background: #f8f9fa;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            margin-bottom: 12px;
-            text-align: right;
-            padding: 10px 14px;
-            font-family: monospace;
-            font-weight: 700;
-            font-size: 24px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            overflow: hidden;
-        }
-
-        .calc-prev {
-            font-size: 13px;
-            color: #868e96;
-        }
-
-        .calc-current {
-            font-size: 24px;
-            color: var(--primary);
-        }
-
-        .calc-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .calc-actions .btn {
-            flex: 1;
-            padding: 14px;
-            font-size: 15px;
-        }
-
-        /* Chart */
-        .chart-section {
-            margin-bottom: 14px;
-        }
-
-        .chart-tabs {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 12px;
-        }
-
-        .chart-tab {
-            flex: 1;
-            padding: 8px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            background: #fff;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 12px;
-            text-align: center;
-        }
-
-        .chart-tab.active {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-        }
-
-        .chart-canvas-wrap {
-            position: relative;
-            width: 100%;
-            height: 420px;
-        }
-
-        .chart-canvas-wrap.doughnut-wrap {
-            height: 320px;
-        }
-
-        .chart-legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 12px;
-            justify-content: center;
-            padding: 10px 8px 4px;
-            font-size: 12px;
-        }
-
-        .chart-legend-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .chart-legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        /* Note toggle */
-        .btn-note-icon {
-            background: #f1f3f5;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            width: 38px;
-            height: 38px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            padding: 0;
-            flex-shrink: 0;
-        }
-
-        .btn-note-icon.has-note {
-            background: #fff3cd;
-            border-color: #f39c12;
-        }
-
-        .note-row {
-            display: none;
-            padding-top: 6px;
-        }
-
-        .note-row.show {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
-        /* Recurring */
-        .rec-item {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 8px;
-        }
-
-        .rec-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .rec-item-actions {
-            display: flex;
-            gap: 6px;
-        }
-
-        .btn-edit {
-            background: #e7f1ff;
-            color: var(--primary);
-            padding: 6px 12px;
-            font-size: 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        .rec-meta {
-            font-size: 12px;
-            color: var(--text-sub);
-            margin-top: 4px;
-        }
-
-        .recurring-form {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .recurring-two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-        }
-
-        /* Tabs for views */
-        .view-tab {
-            display: none;
-        }
-
-        .view-tab.active {
-            display: block;
-        }
-
-        /* Warning colors */
-        .warn-yellow {
-            background: #fffbf0 !important;
-            border-left: 3px solid #f39c12;
-        }
-
-        .warn-red {
-            background: #fff5f5 !important;
-            border-left: 3px solid #e74c3c;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-size: 10px;
-            font-weight: 700;
-            margin-left: 6px;
-        }
-
-        .badge-warn {
-            background: #f39c12;
-            color: #fff;
-        }
-
-        .badge-over {
-            background: #e74c3c;
-            color: #fff;
-        }
-
-        /* Help */
-        .help-body h3 {
-            color: var(--primary);
-            border-left: 3px solid var(--primary);
-            padding-left: 8px;
-            margin: 16px 0 8px;
-            font-size: 14px;
-        }
-
-        .help-body ul {
-            padding-left: 18px;
-            font-size: 13px;
-        }
-
-        .help-body li {
-            margin-bottom: 6px;
-        }
-
-        /* Numpad Modal */
-        .numpad-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 300;
-            align-items: flex-end;
-            justify-content: center;
-        }
-
-        .numpad-overlay.active {
-            display: flex;
-        }
-
-        .numpad-content {
-            background: var(--card);
-            width: 100%;
-            border-radius: 20px 20px 0 0;
-            padding: 16px 16px 20px;
-            animation: slideUp 0.25s ease-out;
-        }
-
-        .numpad-display {
-            background: #f8f9fa;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 12px;
-            text-align: right;
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--primary);
-            font-family: monospace;
-            min-height: 52px;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
-
-        .numpad-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        .numpad-btn {
-            padding: 16px 0;
-            border: none;
-            border-radius: 10px;
-            font-size: 22px;
-            font-weight: 700;
-            cursor: pointer;
-            background: #f1f3f5;
-            transition: transform 0.1s, background 0.1s;
-        }
-
-        .numpad-btn:active {
-            transform: scale(0.95);
-            background: #dee2e6;
-        }
-
-        .numpad-btn.back {
-            background: #ffe0b2;
-            color: #e65100;
-            font-size: 20px;
-        }
-
-        .numpad-btn.clear {
-            background: #ff8787;
-            color: #fff;
-        }
-
-        .numpad-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .numpad-actions .btn {
-            flex: 1;
-            padding: 14px;
-            font-size: 15px;
-        }
-
-        /* Legacy compact theme kept inert for migration reference. */
-        @media not all {
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #172033;
-            --primary-soft: #24324b;
-            --income: #16a34a;
-            --expense: #dc2626;
-            --bg: #e8edf2;
-            --card: #ffffff;
-            --text: #111827;
-            --text-sub: #64748b;
-            --border: #dfe5ee;
-            --radius: 12px;
-            --shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
-            --bottom-nav-h: 64px;
-        }
-
-        body {
-            background: var(--bg);
-            padding: 14px 12px calc(var(--bottom-nav-h) + 18px);
-            color: var(--text);
-        }
-
-        .app-header,
-        .month-selector,
-        .view-tab {
-            max-width: 480px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .app-header {
-            background: var(--primary-dark);
-            border-radius: 18px 18px 0 0;
-            padding: 18px 18px 10px;
-            margin-top: 4px;
-        }
-
-        .app-title {
-            color: #ffffff;
-            font-size: 17px;
-            letter-spacing: 0;
-        }
-
-        .app-title::after {
-            content: "월별 예산 관리";
-            display: block;
-            color: #9fb1cf;
-            font-size: 11px;
-            font-weight: 600;
-            margin-top: 3px;
-        }
-
-        .app-header .btn-sm {
-            background: var(--primary-soft) !important;
-            color: #dbeafe !important;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            min-width: 44px;
-            height: 34px;
-        }
-
-        .month-selector {
-            background: var(--primary-dark);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 0 0 18px 18px;
-            box-shadow: var(--shadow);
-            margin-bottom: 16px;
-            padding: 8px 16px 16px;
-        }
-
-        .month-nav-btn {
-            background: var(--primary-soft);
-            color: #dbeafe;
-            width: 42px;
-            height: 38px;
-            border-radius: 12px;
-            font-size: 15px;
-        }
-
-        .month-display {
-            color: #ffffff;
-            font-size: 22px;
-            min-width: 156px;
-        }
-
-        .dashboard,
-        .section-card,
-        .install-panel {
-            border: 1px solid var(--border);
-            box-shadow: none;
-            border-radius: var(--radius);
-            background: var(--card);
-        }
-
-        .dashboard {
-            padding: 14px;
-            margin-bottom: 12px;
-        }
-
-        .dash-title {
-            color: var(--text-sub);
-            font-size: 12px;
-            letter-spacing: 0;
-            margin-bottom: 10px;
-        }
-
-        .dash-grid {
-            gap: 8px;
-        }
-
-        .dash-item {
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 11px 10px;
-        }
-
-        .dash-label {
-            font-size: 11px;
-            color: var(--text-sub);
-        }
-
-        .dash-value {
-            font-size: 16px;
-            color: var(--text);
-        }
-
-        .monthly-dashboard {
-            padding: 0;
-            overflow: hidden;
-        }
-
-        .monthly-balance-card {
-            padding: 16px 18px 14px;
-            background: #ffffff;
-        }
-
-        .monthly-balance-value {
-            font-size: 28px;
-            line-height: 1.15;
-            font-weight: 900;
-            letter-spacing: 0;
-            margin-bottom: 14px;
-        }
-
-        .monthly-metrics {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-
-        .metric-chip {
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 8px;
-        }
-
-        .metric-label {
-            color: var(--text-sub);
-            font-size: 11px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .metric-value {
-            font-size: 14px;
-            font-weight: 900;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .metric-value.income {
-            color: var(--income);
-        }
-
-        .metric-value.expense {
-            color: var(--expense);
-        }
-
-        #yAssets {
-            color: #7c3aed;
-        }
-
-        .yearly-dashboard .dash-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .section-card {
-            margin-bottom: 12px;
-            overflow: hidden;
-        }
-
-        .section-card.sec-income,
-        .section-card.sec-variable,
-        .section-card.sec-personal,
-        .section-card.sec-common,
-        .section-card.sec-assets {
-            background: #ffffff;
-        }
-
-        .section-card.sec-income {
-            border-left: 4px solid var(--income);
-        }
-
-        .section-card.sec-variable {
-            border-left: 4px solid #f97316;
-        }
-
-        .section-card.sec-personal {
-            border-left: 4px solid var(--primary);
-        }
-
-        .section-card.sec-common {
-            border-left: 4px solid #7c3aed;
-        }
-
-        .section-card.sec-assets {
-            border-left: 4px solid #0891b2;
-        }
-
-        .section-hdr {
-            background: #ffffff;
-            padding: 12px 14px;
-        }
-
-        .section-hdr-left,
-        .section-hdr-right {
-            font-size: 13px;
-        }
-
-        .empty-state {
-            padding: 18px 14px;
-            text-align: center;
-            color: var(--text-sub);
-            font-size: 13px;
-        }
-
-        .budget-summary-row {
-            padding: 11px 14px;
-            border-bottom: 1px solid #eef2f7;
-        }
-
-        .budget-summary-row:last-child {
-            border-bottom: none;
-        }
-
-        .budget-summary-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            font-size: 12px;
-            margin-bottom: 6px;
-        }
-
-        .budget-summary-name {
-            font-weight: 800;
-            color: var(--text);
-        }
-
-        .budget-summary-amount {
-            color: var(--text-sub);
-            white-space: nowrap;
-        }
-
-        input,
-        select,
-        textarea {
-            background: #f8fafc;
-            border-color: var(--border);
-            border-radius: 9px;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-        }
-
-        .btn {
-            border-radius: 9px;
-        }
-
-        .btn-primary,
-        .btn-add,
-        .calc-btn.eq,
-        .chart-tab.active {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: #ffffff;
-        }
-
-        .btn-add {
-            border-style: solid;
-            border-radius: 0;
-        }
-
-        .btn-del {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-
-        .bottom-nav {
-            left: 50%;
-            right: auto;
-            width: min(100%, 480px);
-            transform: translateX(-50%);
-            height: var(--bottom-nav-h);
-            border: 1px solid var(--border);
-            border-bottom: none;
-            border-radius: 18px 18px 0 0;
-            box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08);
-        }
-
-        .nav-item {
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .nav-item span {
-            font-size: 18px;
-            margin-bottom: 1px;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-        }
-
-        .modal-content,
-        .numpad-content {
-            max-width: 480px;
-            border-radius: 20px 20px 0 0;
-        }
-
-        .calc-btn,
-        .numpad-btn {
-            background: #f1f5f9;
-            border-radius: 12px;
-        }
-
-        .calc-display,
-        .numpad-display {
-            background: #f8fafc;
-            color: var(--text);
-        }
-
-        .auth-panel {
-            max-width: 480px;
-            margin: 0 auto 12px;
-            padding: 12px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .auth-title {
-            font-size: 14px;
-            font-weight: 800;
-            color: var(--text);
-        }
-
-        .auth-status {
-            margin-top: 3px;
-            font-size: 12px;
-            line-height: 1.35;
-            color: var(--text-sub);
-        }
-
-        .auth-actions {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-
-        .auth-btn {
-            border: none;
-            border-radius: 10px;
-            padding: 9px 12px;
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .auth-login {
-            background: var(--primary);
-            color: #fff;
-        }
-
-        .auth-logout {
-            background: #eef2f7;
-            color: var(--text);
-        }
-
-        .auth-panel[data-state="signed-in"] {
-            border-color: #bbf7d0;
-        }
-
-        .auth-panel[data-state="error"] {
-            border-color: #fecaca;
-        }
-
-        @media (max-width: 420px) {
-            .auth-panel {
-                align-items: stretch;
-                flex-direction: column;
-            }
-
-            .auth-actions,
-            .auth-btn {
-                width: 100%;
-            }
-        }
-
-        @media (min-width: 520px) {
-            body {
-                padding-top: 24px;
-            }
-        }
-        }
-
-        /* 2026 visual refresh — calm, tactile mobile finance UI */
-        :root {
-            --primary: #5b5bd6;
-            --primary-dark: #20223a;
-            --primary-soft: #eeedff;
-            --income: #0e9f6e;
-            --expense: #ef5b64;
-            --bg: #f5f6fa;
-            --card: rgba(255, 255, 255, .96);
-            --text: #202234;
-            --text-sub: #7a8094;
-            --border: #e7e9f1;
-            --radius: 20px;
-            --shadow: 0 10px 30px rgba(32, 34, 58, .07);
-            --bottom-nav-h: 74px;
-        }
-
-        html { background: #eef0f6; }
-
-        body {
-            max-width: 520px;
-            min-height: 100vh;
-            margin: 0 auto;
-            padding: 0 16px calc(var(--bottom-nav-h) + 28px);
-            background:
-                radial-gradient(circle at 85% -5%, rgba(123, 97, 255, .12), transparent 28%),
-                linear-gradient(180deg, #f8f8fc 0%, var(--bg) 38%);
-            font-size: 14px;
-            letter-spacing: -.015em;
-        }
-
-        button, input, select, textarea { transition: border-color .18s, box-shadow .18s, background .18s, transform .12s; }
-        button:active { transform: scale(.96); }
-
-        .app-header,
-        .month-selector,
-        .view-tab { max-width: none; }
-
-        .app-header {
-            position: relative;
-            background: transparent;
-            border-radius: 0;
-            margin: 0;
-            padding: 22px 2px 12px;
-        }
-
-        .app-title {
-            color: var(--text);
-            font-size: 22px;
-            font-weight: 900;
-            letter-spacing: -.06em;
-        }
-
-        .app-title::after {
-            content: "오늘의 돈 흐름을 가볍게";
-            display: block;
-            color: var(--text-sub);
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: -.02em;
-            margin-top: 5px;
-        }
-
-        .header-icon-btn {
-            display: grid;
-            place-items: center;
-            width: 44px;
-            min-width: 44px;
-            height: 44px;
-            padding: 0;
-            border: 1px solid var(--border);
-            border-radius: 13px;
-            background: #fff;
-            color: var(--text);
-            box-shadow: 0 5px 15px rgba(32, 34, 58, .06);
-            cursor: pointer;
-        }
-        .header-icon-btn svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-        .auth-panel {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            max-width: none;
-            margin: 0 0 12px;
-            padding: 11px 13px;
-            border: 1px solid rgba(91, 91, 214, .12);
-            border-radius: 15px;
-            background: rgba(255,255,255,.74);
-            box-shadow: none;
-            backdrop-filter: blur(12px);
-        }
-
-        .auth-title { font-size: 13px; }
-        .auth-status { font-size: 11px; margin-top: 3px; }
-        .auth-actions { display: flex; gap: 6px; flex-shrink: 0; }
-        .auth-btn { min-height: 42px; border: 0; border-radius: 11px; padding: 8px 12px; font-weight: 800; cursor: pointer; }
-        .auth-login { color: #fff; background: var(--primary); }
-        .auth-logout { color: var(--text); background: #eff0f5; }
-        .auth-panel[data-state="signed-in"] { border-color: #c9edde; }
-        .auth-panel[data-state="error"] { border-color: #f6c9cd; }
-
-        .month-selector {
-            justify-content: space-between;
-            margin: 0 0 18px;
-            padding: 8px;
-            border: 1px solid rgba(255,255,255,.32);
-            border-radius: 18px;
-            background: linear-gradient(135deg, #5b5bd6, #7773e8);
-            box-shadow: 0 14px 30px rgba(91, 91, 214, .23);
-        }
-
-        .month-nav-btn {
-            width: 44px;
-            height: 44px;
-            color: #fff;
-            border: 1px solid rgba(255,255,255,.14);
-            border-radius: 13px;
-            background: rgba(255,255,255,.12);
-        }
-
-        .month-nav-btn:active { background: rgba(255,255,255,.22); }
-        .month-display { color: #fff; font-size: 19px; min-width: 150px; letter-spacing: -.04em; }
-
-        .dashboard,
-        .section-card,
-        .install-panel {
-            border: 1px solid rgba(231, 233, 241, .9);
-            border-radius: var(--radius);
-            background: var(--card);
-            box-shadow: var(--shadow);
-        }
-
-        .dashboard { padding: 17px; margin-bottom: 14px; }
-        .dash-title { margin-bottom: 12px; color: var(--text-sub); font-size: 12px; font-weight: 800; }
-
-        .monthly-dashboard {
-            position: relative;
-            border: 0;
-            overflow: hidden;
-            background: linear-gradient(145deg, #20223a 0%, #303354 100%);
-            box-shadow: 0 18px 36px rgba(32, 34, 58, .19);
-        }
-
-        .monthly-dashboard::after {
-            content: "";
-            position: absolute;
-            width: 150px;
-            height: 150px;
-            top: -75px;
-            right: -55px;
-            border-radius: 50%;
-            background: rgba(139, 133, 255, .2);
-        }
-
-        .monthly-balance-card { position: relative; z-index: 1; padding: 20px; background: transparent; }
-        .monthly-dashboard .dash-title { color: #aeb2ce; }
-        .monthly-balance-value {
-            margin-bottom: 19px;
-            color: #fff;
-            font-size: 31px;
-            font-weight: 950;
-            letter-spacing: -.06em;
-            text-shadow: 0 2px 12px rgba(0, 0, 0, .18);
-        }
-        .monthly-balance-value.is-positive { color: #5ee0ac; text-shadow: 0 3px 18px rgba(54, 211, 153, .25); }
-        .monthly-balance-value.is-negative { color: #ff9298; text-shadow: 0 3px 18px rgba(255, 112, 121, .2); }
-        .monthly-balance-value.is-zero { color: #fff; }
-        .monthly-metrics { gap: 10px; }
-        .metric-chip {
-            padding: 11px 12px;
-            text-align: left;
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 14px;
-            background: rgba(255,255,255,.07);
-        }
-        .metric-label { color: #aeb2ce; }
-        .metric-value { font-size: 14px; }
-        .metric-value.income { color: #57d6a5; }
-        .metric-value.expense { color: #ff9298; }
-
-        .yearly-dashboard .dash-grid { gap: 9px; }
-        .dash-item {
-            padding: 13px 12px;
-            text-align: left;
-            border: 0;
-            border-radius: 14px;
-            background: #f7f7fb;
-        }
-        .dash-label { margin-bottom: 6px; font-size: 11px; font-weight: 700; }
-        .dash-value { font-size: 15px; letter-spacing: -.035em; }
-
-        .section-card { margin-bottom: 14px; overflow: hidden; }
-        .section-card.sec-income,
-        .section-card.sec-variable,
-        .section-card.sec-personal,
-        .section-card.sec-common,
-        .section-card.sec-assets { border-left: 0; }
-
-        .section-card.sec-income { --section-accent: #0e9f6e; --section-tint: #eaf9f3; }
-        .section-card.sec-variable { --section-accent: #f59e42; --section-tint: #fff5e8; }
-        .section-card.sec-personal { --section-accent: #5b5bd6; --section-tint: #efefff; }
-        .section-card.sec-common { --section-accent: #a855c7; --section-tint: #f8edfc; }
-        .section-card.sec-assets { --section-accent: #168aad; --section-tint: #eaf7fb; }
-
-        .section-hdr {
-            position: relative;
-            min-height: 53px;
-            padding: 15px 16px 15px 20px;
-            border-bottom: 1px solid var(--border) !important;
-            background: #fff;
-        }
-
-        .section-card[class*="sec-"] .section-hdr::before {
-            content: "";
-            position: absolute;
-            left: 8px;
-            top: 17px;
-            width: 4px;
-            height: 19px;
-            border-radius: 5px;
-            background: var(--section-accent);
-        }
-
-        .section-hdr-left { color: var(--text) !important; font-size: 14px; font-weight: 900; }
-        .section-hdr-right { color: var(--section-accent, var(--primary)) !important; font-size: 13px; font-weight: 900; }
-
-        .row-item {
-            gap: 8px;
-            padding: 12px 14px;
-            border-bottom: 1px solid #f0f1f5;
-            background: #fff;
-        }
-
-        .row-item:nth-child(even) { background: #fdfdff; }
-        .row-item input,
-        .row-item select {
-            height: 44px;
-            padding: 7px 11px;
-            border: 1px solid #e8eaf1;
-            border-radius: 12px;
-            background: #f7f8fb;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        input, select, textarea {
-            min-height: 44px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: #f7f8fb;
-            color: var(--text);
-        }
-
-        input:focus, select:focus, textarea:focus {
-            border-color: rgba(91,91,214,.55);
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(91,91,214,.1);
-        }
-
-        .row-amount-line { display: flex; align-items: center; gap: 7px; }
-        .row-amount-line > input { flex: 1; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
-        .row-icon-btn {
-            display: grid;
-            place-items: center;
-            width: 44px;
-            min-width: 44px;
-            height: 44px;
-            padding: 0;
-            border: 1px solid var(--border);
-            border-radius: 13px;
-            color: #62687b;
-            background: #f4f5f9;
-            cursor: pointer;
-        }
-        .row-icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-        .row-menu-btn[aria-expanded="true"] { color: #fff; border-color: var(--primary); background: var(--primary); }
-        .row-more-actions {
-            display: none;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 7px;
-            padding: 8px;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: #f7f7fb;
-        }
-        .row-more-actions.show { display: grid; }
-        .row-more-actions button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            min-height: 42px;
-            padding: 8px;
-            border: 0;
-            border-radius: 10px;
-            color: #62687b;
-            background: #fff;
-            font-family: inherit;
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-        }
-        .row-more-actions svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-        .row-more-actions button.is-active { color: var(--primary); background: var(--primary-soft); }
-        .row-more-actions button.danger { color: #d33d49; background: #fff0f1; }
-        .row-more-actions.two-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .note-row input { background: #fffdf4; border-color: #f2e6b9; }
-
-        .btn {
-            min-height: 44px;
-            border-radius: 12px;
-            font-weight: 800;
-        }
-
-        .btn-primary { background: var(--primary); box-shadow: 0 7px 15px rgba(91,91,214,.2); }
-        .btn-secondary { color: #5e6375; background: #eff0f5; }
-        .btn-soft-success { color: #087d57; background: #e5f7f0; }
-        .btn-block { width: 100%; }
-        .btn-add {
-            border: 0;
-            border-radius: 0;
-            padding: 13px;
-            background: var(--section-tint, #efefff);
-            color: var(--section-accent, var(--primary));
-        }
-        .btn-del { background: #fff0f1; color: #d33d49; }
-
-        .budget-item { padding: 15px 16px; }
-        .budget-name { font-size: 14px; font-weight: 800; }
-        .budget-bar-wrap { height: 8px; margin: 10px 0 6px; border-radius: 99px; background: #eeeef5; }
-        .budget-bar { border-radius: 99px; }
-        .budget-summary-row { padding: 13px 16px; }
-        .budget-summary-row:last-child { border-bottom: 0; }
-        .budget-summary-top { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 7px; font-size: 12px; }
-        .budget-summary-name { color: var(--text); font-weight: 900; }
-        .budget-summary-amount { color: var(--text-sub); white-space: nowrap; }
-        .empty-state { padding: 22px 16px; color: var(--text-sub); text-align: center; font-size: 13px; }
-
-        .chart-tabs { padding: 4px; border-radius: 13px; background: #f0f1f6; gap: 4px; }
-        .chart-tab { border: 0; border-radius: 10px; background: transparent; }
-        .chart-tab.active { background: #fff; color: var(--primary); box-shadow: 0 3px 10px rgba(32,34,58,.08); }
-
-        .install-panel { padding: 16px; background: linear-gradient(145deg, #f0efff, #fff); }
-        .install-title { color: var(--primary); }
-
-        .settings-card {
-            margin-bottom: 14px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            background: #fff;
-            box-shadow: var(--shadow);
-        }
-        .settings-item {
-            display: grid;
-            grid-template-columns: 42px minmax(0, 1fr) 20px;
-            align-items: center;
-            gap: 11px;
-            width: 100%;
-            min-height: 66px;
-            padding: 11px 14px;
-            border: 0;
-            border-bottom: 1px solid #f0f1f5;
-            color: var(--text);
-            background: #fff;
-            text-align: left;
-            font-family: inherit;
-            cursor: pointer;
-        }
-        .settings-item:last-child { border-bottom: 0; }
-        .settings-item:hover { background: #fafafe; }
-        .settings-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; color: var(--primary); background: var(--primary-soft); }
-        .settings-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-        .settings-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
-        .settings-copy strong { font-size: 13px; font-weight: 900; }
-        .settings-copy small { overflow: hidden; color: var(--text-sub); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-        .settings-arrow { color: #b3b6c1; font-size: 24px; font-weight: 400; }
-        .settings-danger-zone { margin-top: 18px; box-shadow: none; }
-        .settings-item.danger .settings-icon { color: #d33d49; background: #fff0f1; }
-        .settings-item.danger .settings-copy strong { color: #c93643; }
-
-        .rec-note { min-height: 58px; resize: vertical; }
-        .rec-form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .rec-form-actions .btn { min-width: 0; }
-        .rec-form-actions #recCancelBtn:not([hidden]) { grid-column: 1 / -1; }
-
-        .bottom-nav {
-            left: 50%;
-            right: auto;
-            bottom: 10px;
-            width: calc(100% - 24px);
-            max-width: 496px;
-            height: var(--bottom-nav-h);
-            transform: translateX(-50%);
-            padding: 7px;
-            border: 1px solid rgba(225,227,236,.9);
-            border-radius: 23px;
-            background: rgba(255,255,255,.92);
-            box-shadow: 0 16px 40px rgba(32,34,58,.2);
-            backdrop-filter: blur(18px);
-        }
-
-        .nav-item {
-            position: relative;
-            gap: 3px;
-            border-radius: 16px;
-            color: #9195a6;
-            font-size: 10px;
-            font-weight: 800;
-        }
-        .nav-item svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-        .nav-item span { font-size: 11px; }
-        .nav-item.active { color: var(--primary); background: var(--primary-soft); }
-
-        .modal-overlay { padding: 12px; background: rgba(25,27,45,.56); backdrop-filter: blur(5px); align-items: center; }
-        .modal-content,
-        .numpad-content {
-            width: 100%;
-            max-width: 480px;
-            max-height: 88vh;
-            padding: 20px;
-            border: 1px solid rgba(255,255,255,.35);
-            border-radius: 24px;
-            box-shadow: 0 28px 70px rgba(20,22,40,.28);
-        }
-        .modal-header { margin-bottom: 17px; padding-bottom: 14px; }
-        .modal-header strong { font-size: 17px; }
-        .modal-close { display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#f1f2f6;font-size:16px; }
-        .rec-item { padding: 13px; border: 1px solid var(--border); border-radius: 14px; background: #fafafe; }
-        .rec-meta { line-height: 1.55; }
-
-        .calc-display, .numpad-display { border: 0; border-radius: 16px; background: #f3f4f8; }
-        .calc-btn, .numpad-btn { border-radius: 14px; background: #f3f4f8; }
-
-        button:focus-visible,
-        input:focus-visible,
-        select:focus-visible,
-        textarea:focus-visible,
-        [tabindex]:focus-visible { outline: 3px solid rgba(91,91,214,.34); outline-offset: 2px; }
-
-        @media (max-width: 420px) {
-            body { padding-left: 10px; padding-right: 10px; }
-            .auth-panel { align-items: center; flex-direction: row; }
-            .auth-actions, .auth-btn { width: auto; }
-            .row-item { padding: 11px 10px; }
-            .bottom-nav { width: calc(100% - 16px); bottom: 8px; }
-            .modal-overlay { padding: 8px; align-items: flex-end; }
-            .modal-content, .numpad-content { border-radius: 24px 24px 18px 18px; padding-bottom: 22px; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-        }
-        .amount-report { width: 100%; text-align: left; }
-        .report-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
-        .report-controls label { min-width: 0; font-size: 12px; color: var(--text-sub); }
-        .report-controls select { margin-top: 5px; padding: 9px 3px; font-size: 13px; }
-        .report-total, .amount-summary-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; }
-        .report-total { border-bottom: 2px solid var(--border); flex-wrap: wrap; }
-        .report-total strong { font-size: 20px; }
-        .amount-summary-row > :first-child { min-width: 0; overflow-wrap: anywhere; }
-        .amount-summary-row > :last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; }
-        .amount-summary-row small { display: block; color: var(--text-sub); margin-top: 4px; font-weight: 400; }
-        .amount-group { border-bottom: 1px solid var(--border); }
-        .amount-group summary { cursor: pointer; }
-        .amount-group summary::before { content: '›'; color: var(--primary); }
-        .amount-group[open] summary::before { content: '⌄'; }
-        .amount-group summary > :first-child { flex: 1; }
-        .amount-entry { padding: 10px 8px; font-size: 13px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px; }
-        .report-hint { font-size: 12px; color: var(--text-sub); line-height: 1.6; margin: 8px 0; }
-    </style>
+    <link rel="stylesheet" href="./styles.css?v=7">
 </head>
 
 <body>
     <!-- Header -->
     <div class="app-header">
-        <div class="app-title">스마트 가계부</div>
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"></rect><path d="M3 9h18M7 5V3m5 2V3m5 2V3M7 14h3m4 0h3"></path></svg></span>
+            <div><h1 class="app-title">스마트 가계부</h1><p class="app-subtitle">차곡차곡 기록하는 나의 일상</p></div>
+        </div>
         <button class="header-icon-btn" onclick="openModal('helpModal')" aria-label="사용 가이드 열기">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.3 2.3 0 1 1 3.5 2c-.9.5-1.3 1-1.3 2"></path><path d="M12 17h.01"></path></svg>
         </button>
@@ -1837,22 +45,22 @@
 
     <!-- Month Selector -->
     <div class="month-selector">
-        <button class="month-nav-btn" onclick="changeMonthByArrow(-1)" aria-label="이전 달">◀</button>
+        <button class="month-nav-btn" onclick="changeMonthByArrow(-1)" aria-label="이전 달"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"></path></svg></button>
         <div class="month-display"
             onclick="this.querySelector('input').showPicker ? this.querySelector('input').showPicker() : this.querySelector('input').click()">
             <span id="monthDisplayText">2025년 1월</span>
             <input type="month" id="monthPicker" onchange="changeMonth()" aria-label="조회할 연월 선택">
         </div>
-        <button class="month-nav-btn" onclick="changeMonthByArrow(1)" aria-label="다음 달">▶</button>
+        <button class="month-nav-btn" onclick="changeMonthByArrow(1)" aria-label="다음 달"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"></path></svg></button>
     </div>
 
     <!-- Bottom Navigation (tab switcher) -->
-    <div class="bottom-nav">
+    <nav class="bottom-nav" aria-label="주요 메뉴">
         <button class="nav-item active" data-tab="home" onclick="switchTab('home',this)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"></path><path d="M5 9v11h14V9"></path><path d="M9 20v-6h6v6"></path></svg><span>홈</span></button>
         <button class="nav-item" data-tab="detail" onclick="switchTab('detail',this)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg><span>내역</span></button>
         <button class="nav-item" data-tab="chart" onclick="switchTab('chart',this)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg><span>차트</span></button>
         <button class="nav-item" data-tab="more" onclick="switchTab('more',this)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"></path></svg><span>더보기</span></button>
-    </div>
+    </nav>
 
     <!-- TAB: Home -->
     <div id="tab-home" class="view-tab active">
@@ -1861,6 +69,7 @@
             <div class="monthly-balance-card">
                 <div class="dash-title"><span id="currentMonthLabel">1월</span> 잔액</div>
                 <div class="monthly-balance-value" id="mBalance">0원</div>
+                <p class="balance-caption">수입에서 지출을 뺀 이번 달 잔액</p>
                 <div class="monthly-metrics">
                     <div class="metric-chip">
                         <div class="metric-label">수입</div>
@@ -1875,7 +84,7 @@
         </div>
         <!-- Yearly Dashboard -->
         <div class="dashboard yearly-dashboard">
-            <div class="dash-title"><span id="yearlyLabel">2025</span> 연간 누적</div>
+            <div class="dash-title"><span id="yearlyLabel">2025</span>년 연간 누적</div>
             <div class="dash-grid">
                 <div class="dash-item">
                     <div class="dash-label">연간 수입</div>
@@ -1896,14 +105,14 @@
             </div>
         </div>
         <!-- Quick Budget Summary -->
-        <div class="section-card">
+        <div class="section-card budget-overview">
             <div class="section-hdr" role="button" tabindex="0" onclick="switchTab('budget', null)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('budget',null)}">
                 <div class="section-hdr-left"><span id="budgetYearHome"></span>년 예산 요약</div>
                 <div class="section-hdr-right">자세히 ▸</div>
             </div>
             <div class="section-body" id="budgetSummaryHome"></div>
         </div>
-        <div class="section-card">
+        <div class="section-card monthly-summary">
             <div class="section-hdr">
                 <div class="section-hdr-left">이달 항목별 지출</div>
                 <button class="btn btn-sm" onclick="openAmountReport()">상세 보기 ›</button>
@@ -1933,7 +142,7 @@
             <div class="section-hdr">
                 <div class="section-hdr-left"><span id="chartYearLabel">2025</span>년 분석</div>
             </div>
-            <div style="padding: 12px 16px;">
+            <div class="chart-content">
                 <div class="chart-tabs">
                     <button class="chart-tab active" onclick="switchChartTab('monthly',this)">월별</button>
                     <button class="chart-tab" onclick="switchChartTab('category',this)">항목별</button>
@@ -1974,7 +183,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <strong>반복 내역 설정</strong>
-                <button class="modal-close" onclick="closeModal('recurringModal')" aria-label="반복 내역 설정 닫기">✖</button>
+                <button class="modal-close" onclick="closeModal('recurringModal')" aria-label="반복 내역 설정 닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"></path></svg></button>
             </div>
             <div class="recurring-form">
                 <select id="recSection">
@@ -1992,8 +201,8 @@
                 <input type="text" id="recAmount" class="input-amount" placeholder="금액"
                     onfocus="handleAmountFocus(this)" onblur="formatNumber(this)" oninput="formatNumber(this)">
                 <div class="recurring-two-col">
-                    <input type="month" id="recStartMonth">
-                    <input type="month" id="recEndMonth" placeholder="종료(선택)">
+                    <label>시작 월<input type="month" id="recStartMonth" aria-label="반복 시작 월"></label>
+                    <label>종료 월 (선택)<input type="month" id="recEndMonth" aria-label="반복 종료 월"></label>
                 </div>
                 <textarea id="recNote" class="rec-note" placeholder="비고(선택)"></textarea>
                 <div class="rec-form-actions">
@@ -2008,10 +217,10 @@
     </div>
 
     <div id="calcModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="계산기">
-        <div class="modal-content" style="max-height:none;padding-bottom:20px;">
+        <div class="modal-content">
             <div class="modal-header">
                 <strong>계산기</strong>
-                <button class="modal-close" onclick="closeModal('calcModal')" aria-label="계산기 닫기">✖</button>
+                <button class="modal-close" onclick="closeModal('calcModal')" aria-label="계산기 닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"></path></svg></button>
             </div>
             <div id="calcDisplay" class="calc-display">
                 <div class="calc-current">0</div>
@@ -2037,8 +246,8 @@
                 <button class="calc-btn" onclick="calcInput('.')">.</button>
             </div>
             <div class="calc-actions">
-                <button class="btn" style="background:#868e96;color:#fff" onclick="closeModal('calcModal')">닫기</button>
-                <button class="btn" style="background:#27ae60;color:#fff" onclick="applyCalculator()">입력</button>
+                <button class="btn btn-secondary" onclick="closeModal('calcModal')">닫기</button>
+                <button class="btn btn-primary" onclick="applyCalculator()">입력</button>
             </div>
         </div>
     </div>
@@ -2061,8 +270,8 @@
                 <button class="numpad-btn back" onclick="numpadBack()">←</button>
             </div>
             <div class="numpad-actions">
-                <button class="btn" style="background:#868e96;color:#fff" onclick="closeNumpad()">취소</button>
-                <button class="btn" style="background:#27ae60;color:#fff" onclick="applyNumpad()">입력</button>
+                <button class="btn btn-secondary" onclick="closeNumpad()">취소</button>
+                <button class="btn btn-primary" onclick="applyNumpad()">입력</button>
             </div>
         </div>
     </div>
@@ -2070,38 +279,38 @@
     <div id="helpModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="사용 가이드">
         <div class="modal-content">
             <div class="modal-header">
-                <strong>📘 사용 가이드</strong>
-                <button class="modal-close" onclick="closeModal('helpModal')" aria-label="사용 가이드 닫기">✖</button>
+                <strong>사용 가이드</strong>
+                <button class="modal-close" onclick="closeModal('helpModal')" aria-label="사용 가이드 닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"></path></svg></button>
             </div>
             <div class="help-body">
                 <h3>1. 데이터 저장 및 백업</h3>
                 <ul>
-                    <li>☁️ 로그인하면 데이터가 Firebase에 실시간 저장됩니다.</li>
-                    <li>💾 브라우저에는 동기화 백업 사본이 함께 저장됩니다.</li>
-                    <li>📥 [더보기] 탭에서 JSON 백업/복구가 가능합니다.</li>
-                    <li>💻 같은 Google 계정으로 로그인한 PC와 스마트폰이 동일한 데이터를 공유합니다.</li>
+                    <li>로그인하면 데이터가 Firebase에 실시간 저장됩니다.</li>
+                    <li>브라우저에는 동기화 백업 사본이 함께 저장됩니다.</li>
+                    <li>[더보기] 탭에서 JSON 백업/복구가 가능합니다.</li>
+                    <li>같은 Google 계정으로 로그인한 PC와 스마트폰이 동일한 데이터를 공유합니다.</li>
                 </ul>
                 <h3>2. 예산 관리</h3>
                 <ul>
-                    <li>💰 [예산] 탭에서 연간 예산을 카테고리별로 설정하세요.</li>
+                    <li>[예산] 탭에서 연간 예산을 카테고리별로 설정하세요.</li>
                     <li>🚦 80% 사용 시 주의(노랑), 100% 초과 시 경고(빨강) 표시</li>
                 </ul>
                 <h3>3. 수입/지출 입력</h3>
                 <ul>
-                    <li>📝 [내역] 탭에서 수입/지출 내역을 입력합니다.</li>
-                    <li>🧮 금액 옆 계산기 버튼으로 계산 후 자동입력이 가능합니다.</li>
+                    <li>[내역] 탭에서 수입/지출 내역을 입력합니다.</li>
+                    <li>금액 옆 계산기 버튼으로 계산 후 자동입력이 가능합니다.</li>
                 </ul>
                 <h3>4. 편리한 기능</h3>
                 <ul>
-                    <li>📑 [더보기] → 전월 복사로 지난달 내역을 복사</li>
-                    <li>🔁 [더보기] → 반복 설정으로 매월 자동 생성</li>
-                    <li>📊 [차트] 탭에서 시각화된 분석을 확인하세요.</li>
+                    <li>[더보기] → 전월 복사로 지난달 내역을 복사</li>
+                    <li>[더보기] → 반복 설정으로 매월 자동 생성</li>
+                    <li>[차트] 탭에서 시각화된 분석을 확인하세요.</li>
                 </ul>
                 <h3>5. 앱 설치</h3>
                 <ul>
-                    <li>📲 [더보기] 탭의 앱 설치 버튼으로 휴대폰 또는 PC에 설치할 수 있습니다.</li>
+                    <li>[더보기] 탭의 앱 설치 버튼으로 휴대폰 또는 PC에 설치할 수 있습니다.</li>
                     <li>🍎 iPhone/iPad는 Safari 공유 버튼 → 홈 화면에 추가를 선택하세요.</li>
-                    <li>🔒 설치 기능은 localhost 또는 HTTPS 주소에서 열었을 때 활성화됩니다.</li>
+                    <li>설치 기능은 localhost 또는 HTTPS 주소에서 열었을 때 활성화됩니다.</li>
                 </ul>
             </div>
         </div>
@@ -2109,6 +318,11 @@
 
     <script>
         if (window.Chart && window.ChartDataLabels) Chart.register(ChartDataLabels);
+        if (window.Chart) {
+            Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'sans-serif';
+            Chart.defaults.font.size = 14;
+            Chart.defaults.color = '#657570';
+        }
         let currentData = { budgets: {}, months: {} };
         let currentMonth = '';
         let activeInputRef = null;
@@ -2730,17 +944,17 @@
             body.innerHTML = yb.map((b, i) => {
                 const spent = sm[b.name] || 0; const bal = b.amount - spent;
                 const pct = b.amount > 0 ? Math.max(0, (spent / b.amount) * 100) : spent > 0 ? 100 : 0;
-                let warnCls = '', badge = '', barColor = '#4a90e2';
-                if (spent > b.amount) { warnCls = 'warn-red'; badge = '<span class="badge badge-over">⚠️초과</span>'; barColor = '#e74c3c'; }
+                let warnCls = '', badge = '', barColor = '#087f72';
+                if (spent > b.amount) { warnCls = 'warn-red'; badge = '<span class="badge badge-over">초과</span>'; barColor = '#e74c3c'; }
                 else if (b.amount > 0 && spent === b.amount) { badge = '<span class="badge badge-warn">소진</span>'; barColor = '#f39c12'; }
-                else if (pct >= 80) { warnCls = 'warn-yellow'; badge = '<span class="badge badge-warn">⚡주의</span>'; barColor = '#f39c12'; }
+                else if (pct >= 80) { warnCls = 'warn-yellow'; badge = '<span class="badge badge-warn">주의</span>'; barColor = '#f39c12'; }
                 totalB += b.amount || 0; totalS += spent;
                 return `<div class="budget-item ${warnCls}">
                 <div class="budget-top">
                     <input type="text" class="budget-name" value="${escapeHtml(b.name)}" onchange="renameCategory(${i},this.value)">
                     ${badge}
                     <input type="text" class="budget-amt-input" value="${(b.amount || 0).toLocaleString()}" onfocus="handleAmountFocus(this)" onblur="formatNumber(this)" oninput="formatNumber(this);updateBudgetAmount(${i},this.value,true)" onchange="updateBudgetAmount(${i},this.value)">
-                    <button class="btn-del btn-sm" onclick="deleteCategory(${i})" style="margin-left:4px">X</button>
+                    <button class="btn-del btn-sm" onclick="deleteCategory(${i})" aria-label="${escapeHtml(b.name)} 예산 항목 삭제"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"></path></svg></button>
                 </div>
                 <div class="budget-bar-wrap"><div class="budget-bar" style="width:${Math.min(pct, 100)}%;background:${barColor}"></div></div>
                 <div class="budget-info">
@@ -2759,7 +973,7 @@
             if (yb.length === 0) { el.innerHTML = '<div class="empty-state">예산 항목이 없습니다</div>'; return; }
             el.innerHTML = yb.map(b => {
                 const spent = sm[b.name] || 0; const pct = b.amount > 0 ? Math.max(0, (spent / b.amount) * 100) : spent > 0 ? 100 : 0;
-                let barColor = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#2563eb';
+                let barColor = pct >= 100 ? '#c44e48' : pct >= 80 ? '#b77a28' : '#087f72';
                 return `<div class="budget-summary-row">
                 <div class="budget-summary-top">
                     <span class="budget-summary-name">${escapeHtml(b.name)}</span>
@@ -2833,7 +1047,7 @@
                     ${list.map((row, i) => {
                     const hasNote = !!(row.note && row.note.trim());
                     return `<div class="row-item">
-                        <div style="display:grid;grid-template-columns:${conf.hasCat ? '1fr 1fr' : '1fr'};gap:5px">
+                        <div class="row-fields ${conf.hasCat ? '' : 'no-category'}">
                             <input type="text" value="${escapeHtml(row.item || '')}" placeholder="사용내역" aria-label="${escapeHtml(conf.title)} ${i + 1}번 항목명" style="text-align:left" oninput="updateData('${conf.id}',${i},'item',this.value,true)" onchange="updateData('${conf.id}',${i},'item',this.value)">
                             ${conf.hasCat ? `<select onchange="updateData('${conf.id}',${i},'category',this.value)">
                                 <option value="">예산구분</option>
@@ -2917,7 +1131,7 @@
                     ${list.map((row, i) => {
                 const hasNote = !!(row.note && row.note.trim());
                 return `<div class="row-item">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                        <div class="row-fields">
                             <input type="text" value="${escapeHtml(row.item || '')}" placeholder="사용내역" style="text-align:left" oninput="updateData('assets',${i},'item',this.value,true)" onchange="updateData('assets',${i},'item',this.value)">
                             <input type="text" value="${escapeHtml(row.category || '')}" placeholder="자산구분" style="text-align:left" oninput="updateData('assets',${i},'category',this.value,true)" onchange="updateData('assets',${i},'category',this.value)">
                         </div>
@@ -2977,7 +1191,7 @@
             document.getElementById('yIncome').innerText = yI.toLocaleString() + '원';
             document.getElementById('yExpense').innerText = yE.toLocaleString() + '원';
             const yBalEl = document.getElementById('yBalance');
-            yBalEl.innerText = yB.toLocaleString() + '원'; yBalEl.style.color = yB < 0 ? '#dc2626' : '#16a34a';
+            yBalEl.innerText = yB.toLocaleString() + '원'; yBalEl.style.color = yB < 0 ? 'var(--expense)' : 'var(--income)';
         }
 
         // Format
@@ -3372,8 +1586,8 @@
             chartInstance = new Chart(ctx, {
                 type: 'line', data: {
                     labels: ms, datasets: [
-                        { label: '수입', data: iD, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.1)', tension: 0.4 },
-                        { label: '지출', data: eD, borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)', tension: 0.4 }
+                        { label: '수입', data: iD, borderColor: '#087f72', backgroundColor: 'rgba(8,127,114,0.1)', tension: 0.25 },
+                        { label: '지출', data: eD, borderColor: '#c44e48', backgroundColor: 'rgba(196,78,72,0.1)', tension: 0.25 }
                     ]
                 }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, datalabels: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
@@ -3404,7 +1618,7 @@
             document.getElementById('chartCanvasWrap').className = 'chart-canvas-wrap';
             document.getElementById('chartLegend').innerHTML = '';
             chartInstance = new Chart(ctx, {
-                type: 'bar', data: { labels: lb, datasets: [{ label: '예산', data: bd, backgroundColor: 'rgba(74,144,226,0.7)' }, { label: '사용액', data: sd, backgroundColor: 'rgba(231,76,60,0.7)' }] },
+                type: 'bar', data: { labels: lb, datasets: [{ label: '예산', data: bd, backgroundColor: '#74b9a7', borderRadius: 4 }, { label: '사용액', data: sd, backgroundColor: '#e09585', borderRadius: 4 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, datalabels: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
         }

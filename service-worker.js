@@ -1,7 +1,8 @@
-const CACHE_NAME = 'smart-ledger-pwa-v6';
+const CACHE_NAME = 'smart-ledger-pwa-v7';
 const APP_SHELL = [
   './',
   './index.html',
+  './styles.css?v=7',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -31,7 +32,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   const isSameOrigin = url.origin === self.location.origin;
-  const isStaticAsset = isSameOrigin && (url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest') || /\/icons\/[^/]+\.(?:png|svg)$/.test(url.pathname));
+  const isStaticAsset = isSameOrigin && (url.pathname.endsWith('.html') || url.pathname.endsWith('.css') || url.pathname.endsWith('.webmanifest') || /\/icons\/[^/]+\.(?:png|svg)$/.test(url.pathname));
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
