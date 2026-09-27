@@ -1795,6 +1795,23 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
         }
+        .amount-report { width: 100%; text-align: left; }
+        .report-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
+        .report-controls label { min-width: 0; font-size: 12px; color: var(--text-sub); }
+        .report-controls select { margin-top: 5px; padding: 9px 3px; font-size: 13px; }
+        .report-total, .amount-summary-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; }
+        .report-total { border-bottom: 2px solid var(--border); flex-wrap: wrap; }
+        .report-total strong { font-size: 20px; }
+        .amount-summary-row > :first-child { min-width: 0; overflow-wrap: anywhere; }
+        .amount-summary-row > :last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+        .amount-summary-row small { display: block; color: var(--text-sub); margin-top: 4px; font-weight: 400; }
+        .amount-group { border-bottom: 1px solid var(--border); }
+        .amount-group summary { cursor: pointer; }
+        .amount-group summary::before { content: '›'; color: var(--primary); }
+        .amount-group[open] summary::before { content: '⌄'; }
+        .amount-group summary > :first-child { flex: 1; }
+        .amount-entry { padding: 10px 8px; font-size: 13px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px; }
+        .report-hint { font-size: 12px; color: var(--text-sub); line-height: 1.6; margin: 8px 0; }
     </style>
 </head>
 
@@ -1842,7 +1859,7 @@
         <!-- Monthly Dashboard -->
         <div class="dashboard monthly-dashboard">
             <div class="monthly-balance-card">
-                <div class="dash-title"><span id="currentMonthLabel">1월</span> 월 잔액</div>
+                <div class="dash-title"><span id="currentMonthLabel">1월</span> 잔액</div>
                 <div class="monthly-balance-value" id="mBalance">0원</div>
                 <div class="monthly-metrics">
                     <div class="metric-chip">
@@ -1885,6 +1902,13 @@
                 <div class="section-hdr-right">자세히 ▸</div>
             </div>
             <div class="section-body" id="budgetSummaryHome"></div>
+        </div>
+        <div class="section-card">
+            <div class="section-hdr">
+                <div class="section-hdr-left">이달 항목별 지출</div>
+                <button class="btn btn-sm" onclick="openAmountReport()">상세 보기 ›</button>
+            </div>
+            <div class="section-body" id="monthlyAmountSummary"></div>
         </div>
     </div>
 
@@ -2110,6 +2134,8 @@
         let cloudBooted = false;
         let lastSyncedData = null;
         let localDataDirty = false;
+        let syncSession = 0;
+        let cloudSaveInFlight = null;
         const SECTIONS = ['income', 'variable', 'personal', 'common'];
         const SEC_LABELS = { income: '수입', variable: '지출-변동비', personal: '지출-개인고정비', common: '지출-공통고정비' };
         const SEC_CONFIGS = [
@@ -2125,8 +2151,8 @@
         function isValidMonth(m) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(m || '')); }
         function isValidYear(y) { return /^\d{4}$/.test(String(y || '')); }
         function isMonthInYear(monthKey, year) { return isValidMonth(monthKey) && monthKey.slice(0, 4) === String(year); }
-        function toFiniteNumber(value) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
-        function cloneData(value) { return JSON.parse(JSON.stringify(value)); }
+        function toFiniteNumber(value) { const n = Number(typeof value === 'string' ? value.replace(/,/g, '') : value); return Number.isFinite(n) ? n : 0; }
+        function cloneData(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }
         function sameData(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
         function normalizeRow(row) {
             const source = row && typeof row === 'object' && !Array.isArray(row) ? row : {};
@@ -2210,7 +2236,7 @@
                     if (bv === undefined || !sameData(lv, bv)) result.push(cloneData(lv));
                     return;
                 }
-                result.push(mergeScalar(bv, lv, rv));
+                result.push(mergeKeyedObject(bv || {}, lv, rv));
             });
             return result;
         }
@@ -2464,10 +2490,17 @@
 
         async function logoutFirebase() {
             if (!firebaseServices) return;
+            if (cloudSaveInFlight !== null) return alert('저장이 진행 중입니다. 저장 완료 후 로그아웃해 주세요.');
+            if (localDataDirty) {
+                await saveCloudData();
+                if (localDataDirty) return alert('아직 클라우드에 저장하지 못한 변경사항이 있습니다. 연결을 확인한 뒤 다시 로그아웃해 주세요.');
+            }
             await firebaseServices.signOut(firebaseServices.auth);
         }
 
         function stopLedgerSync() {
+            syncSession++;
+            cloudSaveInFlight = null;
             if (unsubscribeLedger) {
                 unsubscribeLedger();
                 unsubscribeLedger = null;
@@ -2488,6 +2521,7 @@
 
         async function startLedgerSync(user) {
             stopLedgerSync();
+            const session = syncSession;
             currentUser = user;
             cloudSyncEnabled = true;
             setAppVisible(false);
@@ -2495,6 +2529,7 @@
             const ref = getLedgerDocRef(user.uid);
             try {
                 const firstSnap = await firebaseServices.getDoc(ref);
+                if (session !== syncSession) return;
                 if (!firstSnap.exists()) {
                     currentData = readLocalLedgerData() || createDefaultLedgerData();
                     normalizeLedgerData();
@@ -2505,16 +2540,12 @@
                         updatedAt: firebaseServices.serverTimestamp()
                     }, { merge: true });
                 }
+                if (session !== syncSession) return;
                 unsubscribeLedger = firebaseServices.onSnapshot(ref, snapshot => {
+                    if (session !== syncSession || snapshot.metadata?.hasPendingWrites) return;
                     if (!snapshot.exists()) return;
                     const payload = snapshot.data() || {};
-                    if (cloudBooted && payload.updatedBy === SYNC_CLIENT_ID) {
-                        lastSyncedData = cloneData(currentData);
-                        localDataDirty = false;
-                        setAppVisible(true);
-                        setAuthUi('signed-in', currentUser, `클라우드 저장 확인 ${getSyncTimeText()} / 계정: ${getUserSyncLabel(currentUser)}`);
-                        return;
-                    }
+                    if (cloudBooted && cloudSaveInFlight === session && payload.updatedBy === SYNC_CLIENT_ID) return;
                     const remote = normalizedCopy(payload.data && typeof payload.data === 'object' ? payload.data : createDefaultLedgerData());
                     const hadLocalChanges = cloudBooted && localDataDirty;
                     currentData = hadLocalChanges ? mergeLedgerData(lastSyncedData, currentData, remote) : remote;
@@ -2525,12 +2556,15 @@
                     setAuthUi('signed-in', currentUser, `실시간 동기화 중입니다. 계정: ${getUserSyncLabel(currentUser)} / 수신 ${getSyncTimeText()}`);
                     initCurrentView(!cloudBooted);
                     cloudBooted = true;
-                    if (hadLocalChanges && !sameData(currentData, remote)) queueCloudSave();
+                    localDataDirty = !sameData(currentData, remote);
+                    if (localDataDirty) queueCloudSave();
                 }, err => {
+                    if (session !== syncSession) return;
                     console.error('Ledger sync failed', err);
                     setAuthUi('signed-in', currentUser, getFirestoreErrorMessage(err, '실시간 동기화'));
                 });
             } catch (err) {
+                if (session !== syncSession) return;
                 console.error('Ledger load failed', err);
                 cloudSyncEnabled = false;
                 setAppVisible(true);
@@ -2540,15 +2574,19 @@
         }
 
         function queueCloudSave() {
-            if (!cloudSyncEnabled || !firebaseServices || !currentUser) return;
+            if (!cloudSyncEnabled || !cloudBooted || !firebaseServices || !currentUser) return;
             if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
             setAuthUi('signed-in', currentUser, `클라우드 저장 중... 계정: ${getUserSyncLabel(currentUser)}`);
             cloudSaveTimer = setTimeout(saveCloudData, 300);
         }
 
         async function saveCloudData() {
-            if (!cloudSyncEnabled || !firebaseServices || !currentUser) return;
+            if (!cloudSyncEnabled || !cloudBooted || !firebaseServices || !currentUser || cloudSaveInFlight !== null) return;
+            if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
             cloudSaveTimer = null;
+            const session = syncSession;
+            cloudSaveInFlight = session;
+            let succeeded = false;
             try {
                 const ref = getLedgerDocRef(currentUser.uid);
                 const localSnapshot = cloneData(currentData);
@@ -2567,16 +2605,25 @@
                         updatedAt: firebaseServices.serverTimestamp()
                     }, { merge: true });
                 });
-                currentData = normalizedCopy(committedData);
-                lastSyncedData = cloneData(currentData);
-                localDataDirty = false;
+                if (session !== syncSession) return;
+                const latestLocal = cloneData(currentData);
+                currentData = normalizedCopy(mergeLedgerData(localSnapshot, latestLocal, committedData));
+                lastSyncedData = cloneData(committedData);
+                localDataDirty = !sameData(currentData, committedData);
                 writeLocalLedgerBackup();
-                if (!sameData(committedData, localSnapshot)) render();
+                if (!sameData(currentData, latestLocal)) render();
+                succeeded = true;
                 setAuthUi('signed-in', currentUser, `클라우드 저장 완료 ${getSyncTimeText()} / 계정: ${getUserSyncLabel(currentUser)}`);
             } catch (err) {
+                if (session !== syncSession) return;
                 console.error('Cloud save failed', err);
                 if (err?.message === 'ledger-document-too-large') setAuthUi('signed-in', currentUser, '클라우드 저장 한도에 가까워졌습니다. JSON 백업 후 오래된 내역을 정리해 주세요. 로컬 백업은 유지됩니다.');
                 else setAuthUi('signed-in', currentUser, getFirestoreErrorMessage(err, '클라우드 저장'));
+            } finally {
+                if (session === syncSession) {
+                    cloudSaveInFlight = null;
+                    if (succeeded && localDataDirty) queueCloudSave();
+                }
             }
         }
 
@@ -2602,7 +2649,9 @@
             currentData.lastViewedMonth = currentMonth; saveData();
         }
         function changeMonth() {
-            currentMonth = document.getElementById('monthPicker').value;
+            const selected = document.getElementById('monthPicker').value;
+            if (!isValidMonth(selected)) { document.getElementById('monthPicker').value = currentMonth; return; }
+            currentMonth = selected;
             updateMonthText(); applyRecurringToMonth(currentMonth); render();
             currentData.lastViewedMonth = currentMonth; saveData();
         }
@@ -2625,7 +2674,7 @@
                 if (skipped.has(String(r.id))) return;
                 const list = currentData.months[mk][r.section];
                 if (list.some(row => String(row.recurringRuleId || '') === String(r.id))) return;
-                list.push({ id: createRowId(), item: String(r.item || ''), category: String(r.category || ''), amount: Number(r.amount) || 0, note: String(r.note || ''), recurringRuleId: String(r.id) });
+                list.push({ id: `recurring:${mk}:${r.id}`, item: String(r.item || ''), category: String(r.category || ''), amount: Number(r.amount) || 0, note: String(r.note || ''), recurringRuleId: String(r.id) });
                 added++;
             }); return added;
         }
@@ -2651,7 +2700,7 @@
         function render() {
             ensureMonth(currentMonth);
             const year = currentMonth.split('-')[0];
-            if (!currentData.budgets[year] || currentData.budgets[year].length === 0) {
+            if (!currentData.budgets[year]) {
                 const prev = String(Number(year) - 1);
                 if (currentData.budgets[prev] && currentData.budgets[prev].length > 0)
                     currentData.budgets[year] = JSON.parse(JSON.stringify(currentData.budgets[prev]));
@@ -2659,15 +2708,16 @@
                 saveData();
             }
             renderBudget(); renderSections(); renderBudgetSummaryHome(); calculateAll();
+            if (document.getElementById('tab-chart').classList.contains('active')) renderChart(currentChartType);
         }
 
         // Budget
         function getSpentMap(year) {
-            const yb = currentData.budgets[year] || []; const sm = {}; yb.forEach(b => sm[b.name] = 0);
+            const yb = currentData.budgets[year] || []; const sm = Object.create(null); yb.forEach(b => sm[b.name] = 0);
             Object.keys(currentData.months).forEach(mk => {
                 if (isMonthInYear(mk, year)) {
                     const md = currentData.months[mk];
-                    ['variable', 'personal', 'common'].forEach(s => { (md[s] || []).forEach(r => { if (r.category && sm.hasOwnProperty(r.category)) sm[r.category] += (Number(r.amount) || 0); }); });
+                    ['variable', 'personal', 'common'].forEach(s => { (md[s] || []).forEach(r => { if (r.category && Object.hasOwn(sm, r.category)) sm[r.category] += toFiniteNumber(r.amount); }); });
                 }
             }); return sm;
         }
@@ -2679,9 +2729,10 @@
             const body = document.getElementById('budgetBody');
             body.innerHTML = yb.map((b, i) => {
                 const spent = sm[b.name] || 0; const bal = b.amount - spent;
-                const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
+                const pct = b.amount > 0 ? Math.max(0, (spent / b.amount) * 100) : spent > 0 ? 100 : 0;
                 let warnCls = '', badge = '', barColor = '#4a90e2';
-                if (pct >= 100) { warnCls = 'warn-red'; badge = '<span class="badge badge-over">⚠️초과</span>'; barColor = '#e74c3c'; }
+                if (spent > b.amount) { warnCls = 'warn-red'; badge = '<span class="badge badge-over">⚠️초과</span>'; barColor = '#e74c3c'; }
+                else if (b.amount > 0 && spent === b.amount) { badge = '<span class="badge badge-warn">소진</span>'; barColor = '#f39c12'; }
                 else if (pct >= 80) { warnCls = 'warn-yellow'; badge = '<span class="badge badge-warn">⚡주의</span>'; barColor = '#f39c12'; }
                 totalB += b.amount || 0; totalS += spent;
                 return `<div class="budget-item ${warnCls}">
@@ -2707,7 +2758,7 @@
             const el = document.getElementById('budgetSummaryHome');
             if (yb.length === 0) { el.innerHTML = '<div class="empty-state">예산 항목이 없습니다</div>'; return; }
             el.innerHTML = yb.map(b => {
-                const spent = sm[b.name] || 0; const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
+                const spent = sm[b.name] || 0; const pct = b.amount > 0 ? Math.max(0, (spent / b.amount) * 100) : spent > 0 ? 100 : 0;
                 let barColor = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#2563eb';
                 return `<div class="budget-summary-row">
                 <div class="budget-summary-top">
@@ -2722,7 +2773,9 @@
         function addCategory() {
             const year = currentMonth.split('-')[0];
             if (!currentData.budgets[year]) currentData.budgets[year] = [];
-            currentData.budgets[year].push({ name: "새 카테고리", amount: 0 }); saveData(); renderBudget(); renderBudgetSummaryHome();
+            let name = '새 카테고리', suffix = 2;
+            while (currentData.budgets[year].some(b => b.name === name)) name = `새 카테고리 ${suffix++}`;
+            currentData.budgets[year].push({ name, amount: 0 }); saveData(); render();
         }
         function deleteCategory(i) {
             const year = currentMonth.split('-')[0];
@@ -2734,13 +2787,18 @@
         }
         function renameCategory(i, newName) {
             const year = currentMonth.split('-')[0]; const old = currentData.budgets[year][i].name;
+            newName = newName.trim();
+            if (!newName || currentData.budgets[year].some((b, index) => index !== i && b.name === newName)) {
+                alert('빈 이름이나 이미 사용 중인 예산 항목명은 사용할 수 없습니다.'); renderBudget(); return;
+            }
             if (old === newName) return; currentData.budgets[year][i].name = newName;
             Object.keys(currentData.months).forEach(mk => { if (!isMonthInYear(mk, year)) return; const m = currentData.months[mk];['variable', 'personal', 'common'].forEach(s => { (m[s] || []).forEach(r => { if (r.category === old) r.category = newName; }); }); });
             saveData(); render();
         }
         function updateBudgetAmount(i, v, live = false) {
             const year = currentMonth.split('-')[0]; const n = Number(v.replace(/,/g, ''));
-            currentData.budgets[year][i].amount = isNaN(n) ? 0 : n;
+            if (!Number.isFinite(n) || n < 0 || n > Number.MAX_SAFE_INTEGER) { if (!live) { alert('예산은 0 이상의 유효한 금액으로 입력해 주세요.'); renderBudget(); } return; }
+            currentData.budgets[year][i].amount = n;
             saveData();
             if (live) { renderBudgetSummaryHome(); calculateAll(); return; }
             renderBudget(); renderBudgetSummaryHome();
@@ -2807,11 +2865,16 @@
         function updateData(sec, idx, field, val, live = false) {
             let row; if (sec === 'assets') row = currentData.assets[idx];
             else row = currentData.months[currentMonth][sec][idx];
-            if (field === 'amount') { const n = Number(val.replace(/,/g, '')); row[field] = isNaN(n) ? 0 : n; }
+            if (!row) return;
+            if (field === 'amount') {
+                const n = Number(String(val).replace(/,/g, ''));
+                if (!Number.isFinite(n) || Math.abs(n) > Number.MAX_SAFE_INTEGER) { alert('유효한 금액을 입력해 주세요.'); return; }
+                row[field] = n;
+            }
             else row[field] = val;
             saveData(); renderBudget(); renderBudgetSummaryHome();
             if (live) { calculateAll(); return; }
-            renderSections();
+            if (field === 'amount') renderSections();
         }
         function addRow(sec) {
             const nr = { id: createRowId(), item: '', amount: 0, note: '', category: '' };
@@ -2821,8 +2884,14 @@
         }
         function deleteRow(sec, idx) {
             if (!confirm('정말로 삭제하겠습니까?')) return;
-            if (sec === 'assets') { currentData.assets.splice(idx, 1); render(); saveData(); }
-            else { currentData.months[currentMonth][sec].splice(idx, 1); render(); saveData(); }
+            const list = sec === 'assets' ? currentData.assets : currentData.months[currentMonth][sec];
+            const row = list[idx];
+            if (!row) return;
+            if (sec !== 'assets' && row.recurringRuleId) {
+                const skips = currentData.recurringSkips[currentMonth] || [];
+                currentData.recurringSkips[currentMonth] = [...new Set([...skips, String(row.recurringRuleId)])];
+            }
+            list.splice(idx, 1); render(); saveData();
         }
 
         function resetCurrentMonth() {
@@ -2889,8 +2958,9 @@
             balEl.classList.toggle('is-positive', bal > 0);
             balEl.classList.toggle('is-negative', bal < 0);
             balEl.classList.toggle('is-zero', bal === 0);
-            document.getElementById('currentMonthLabel').innerText = currentMonth.split('-')[1] + '월';
+            document.getElementById('currentMonthLabel').innerText = Number(currentMonth.split('-')[1]) + '월';
             calcYearly();
+            renderMonthlyAmountSummary();
         }
         function calcYearly() {
             const year = currentMonth.split('-')[0];
@@ -2912,12 +2982,13 @@
 
         // Format
         function formatNumber(inp) {
+            const sign = inp.value.trim().startsWith('-') ? '-' : '';
             let v = inp.value.replace(/[^0-9.]/g, ''); const p = v.split('.');
             if (p.length > 2) v = p[0] + '.' + p.slice(1).join('');
             if (v) {
-                if (v.includes('.')) { const [i, d] = v.split('.'); inp.value = Number(i).toLocaleString() + '.' + d; }
-                else inp.value = Number(v).toLocaleString();
-            } else inp.value = '';
+                if (v.includes('.')) { const [i, d] = v.split('.'); inp.value = sign + Number(i).toLocaleString() + '.' + d; }
+                else inp.value = sign + Number(v).toLocaleString();
+            } else inp.value = sign;
         }
         function handleAmountFocus(inp) { let r = inp.value.replace(/,/g, ''); if (r === '0') inp.value = ''; else inp.value = r; setTimeout(() => inp.select(), 10); }
 
@@ -2927,7 +2998,18 @@
             const pY = m === 1 ? y - 1 : y, pM = m === 1 ? 12 : m - 1;
             const pk = `${pY}-${String(pM).padStart(2, '0')}`;
             if (!currentData.months[pk]) return alert('이전 달 데이터 없음');
-            if (confirm('전월 데이터를 복사할까요?')) { currentData.months[currentMonth] = JSON.parse(JSON.stringify(currentData.months[pk])); saveData(); render(); }
+            if (confirm('전월 데이터를 복사할까요? 현재 월의 기존 내역은 전월 내역으로 대체됩니다.')) {
+                const copied = {};
+                SECTIONS.forEach(section => {
+                    copied[section] = (currentData.months[pk][section] || []).filter(row => {
+                        if (!row.recurringRuleId) return true;
+                        const rule = currentData.recurringRules.find(r => String(r.id) === String(row.recurringRuleId));
+                        return rule && isRuleActive(rule, currentMonth) && !(currentData.recurringSkips[currentMonth] || []).includes(String(rule.id));
+                    }).map(row => ({ ...cloneData(row), id: row.recurringRuleId ? `recurring:${currentMonth}:${row.recurringRuleId}` : createRowId() }));
+                });
+                currentData.months[currentMonth] = copied;
+                applyRecurringToMonth(currentMonth); saveData(); render();
+            }
         }
 
         // Export/Import
@@ -2975,13 +3057,17 @@
                     const validationError = validateImportedLedger(imported);
                     if (validationError) throw new Error(validationError);
                     const previousData = currentData;
+                    const previousMonth = currentMonth;
                     currentData = imported;
                     try {
                         normalizeLedgerData();
                         if (isValidMonth(currentData.lastViewedMonth)) currentMonth = currentData.lastViewedMonth;
+                        document.getElementById('monthPicker').value = currentMonth; updateMonthText();
                         ensureMonth(currentMonth); applyRecurringToMonth(currentMonth); saveData(); render();
                     } catch (normalizeError) {
                         currentData = previousData;
+                        currentMonth = previousMonth;
+                        document.getElementById('monthPicker').value = currentMonth; updateMonthText();
                         throw normalizeError;
                     }
                     alert('복구 완료!');
@@ -3156,6 +3242,8 @@
             modalReturnFocus = null;
         }
         function numpadInput(v) {
+            if (!/^\d$/.test(v)) return;
+            if (Math.abs(Number(numpadValue + v)) > Number.MAX_SAFE_INTEGER) return;
             if (numpadValue === '0') numpadValue = v;
             else numpadValue += v;
             updateNumpadDisplay();
@@ -3168,7 +3256,8 @@
         }
         function applyNumpad() {
             if (numpadInputRef) {
-                const n = Number(numpadValue) || 0;
+                const n = Number(numpadValue);
+                if (!Number.isFinite(n) || Math.abs(n) > Number.MAX_SAFE_INTEGER) return alert('유효한 금액을 입력해 주세요.');
                 numpadInputRef.value = n.toLocaleString();
                 numpadInputRef.dispatchEvent(new Event('change'));
             }
@@ -3186,7 +3275,7 @@
         function calculateResult() {
             try {
                 const se = sanitizeCalc(calcExpr); if (!isValidCalc(se)) throw new Error();
-                const res = new Function('"use strict";return(' + se + ');')(); if (!isFinite(res)) throw new Error();
+                const res = new Function('"use strict";return(' + se + ');')(); if (!Number.isFinite(res) || Math.abs(res) > Number.MAX_SAFE_INTEGER) throw new Error();
                 calcExpr = String(Math.round(res * 100) / 100); updateCalcDisp();
             } catch (e) { calcExpr = 'Error'; updateCalcDisp(); setTimeout(calcClear, 1000); }
         }
@@ -3203,25 +3292,71 @@
         }
         function applyCalculator() {
             if (activeInputRef && calcExpr !== 'Error') {
-                if (/[+\-*/]/.test(calcExpr)) calculateResult(); if (calcExpr === 'Error') return;
+                calculateResult(); if (calcExpr === 'Error') return;
                 activeInputRef.value = Number(calcExpr).toLocaleString(); activeInputRef.dispatchEvent(new Event('change')); closeModal('calcModal');
             }
         }
 
         // Charts
         let chartInstance = null, currentChartType = 'monthly';
+        let reportPeriod = 'month', reportSection = 'expense', reportGrouping = 'category';
+        function getAmountSummary(period = 'month', section = 'expense', grouping = 'category') {
+            const groups = new Map();
+            let total = 0, count = 0;
+            const add = (row, month, source) => {
+                const amount = toFiniteNumber(row.amount);
+                const item = String(row.item || '').trim() || '이름 없는 항목';
+                const category = String(row.category || '').trim() || '미분류';
+                const key = grouping === 'item' ? item : category;
+                if (!groups.has(key)) groups.set(key, { name: key, amount: 0, count: 0, entries: [] });
+                const group = groups.get(key);
+                group.amount += amount; group.count++;
+                group.entries.push({ item, category, amount, month, section: source });
+                total += amount; count++;
+            };
+            if (section === 'assets') (currentData.assets || []).forEach(row => add(row, '', '유동자산'));
+            else {
+                const sections = section === 'income' ? ['income'] : ['variable', 'personal', 'common'];
+                Object.keys(currentData.months).sort().forEach(mk => {
+                    if (period === 'year' ? !isMonthInYear(mk, currentMonth.slice(0, 4)) : mk !== currentMonth) return;
+                    sections.forEach(s => (currentData.months[mk][s] || []).forEach(row => add(row, mk, SEC_LABELS[s])));
+                });
+            }
+            return { total, count, groups: [...groups.values()].sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name, 'ko')) };
+        }
+        function renderMonthlyAmountSummary() {
+            const summary = getAmountSummary();
+            const el = document.getElementById('monthlyAmountSummary');
+            if (!el) return;
+            el.innerHTML = summary.count ? summary.groups.map(g => `<div class="amount-summary-row"><span>${escapeHtml(g.name)}<small>${g.count}건</small></span><strong>${g.amount.toLocaleString()}원</strong></div>`).join('') +
+                `<div class="report-total"><span>총 지출</span><strong>${summary.total.toLocaleString()}원</strong></div>` : '<div class="empty-state">이달에 입력한 지출이 없습니다.</div>';
+        }
+        function openAmountReport() {
+            reportPeriod = 'month'; reportSection = 'expense'; reportGrouping = 'category';
+            currentChartType = 'category';
+            document.querySelectorAll('.chart-tab').forEach((button, index) => button.classList.toggle('active', index === 1));
+            switchTab('chart');
+        }
+        function updateAmountReport(field, value) {
+            if (field === 'period' && ['month', 'year'].includes(value)) reportPeriod = value;
+            if (field === 'section' && ['expense', 'income', 'assets'].includes(value)) reportSection = value;
+            if (field === 'grouping' && ['category', 'item'].includes(value)) reportGrouping = value;
+            renderChart('category');
+        }
         function switchChartTab(t, el) { currentChartType = t; document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active')); if (el) el.classList.add('active'); renderChart(t); }
         function renderChart(t) {
+            const year = currentMonth.split('-')[0];
+            document.getElementById('chartYearLabel').innerText = year;
+            if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+            if (t === 'category') { renderCategoryChart(); return; }
             if (!window.Chart) {
                 document.getElementById('chartCanvasWrap').style.display = 'none';
                 document.getElementById('chartLegend').innerHTML = '<div style="text-align:center;color:var(--text-sub);padding:40px 0;">차트 라이브러리를 불러오지 못했습니다. 인터넷 연결 후 다시 열어 주세요.</div>';
                 return;
             }
-            const year = currentMonth.split('-')[0]; if (chartInstance) chartInstance.destroy();
             const ctx = document.getElementById('mainChart').getContext('2d');
             document.getElementById('chartCanvasWrap').style.display = 'block';
             if (t === 'monthly') renderMonthlyChart(ctx, year);
-            else if (t === 'category') renderCategoryChart(ctx, year);
             else if (t === 'budget') renderBudgetChart(ctx, year);
         }
         function renderMonthlyChart(ctx, year) {
@@ -3243,58 +3378,28 @@
                 }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, datalabels: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
         }
-        function renderCategoryChart(ctx, year) {
-            const catData = {};
-            (currentData.budgets[year] || []).forEach(b => { catData[b.name] = []; });
-            Object.keys(currentData.months).forEach(mk => {
-                if (isMonthInYear(mk, year)) {
-                    const mNum = parseInt(mk.split('-')[1], 10);
-                    const md = currentData.months[mk];
-                    ['variable', 'personal', 'common'].forEach(s => {
-                        (md[s] || []).forEach(r => {
-                            if (r.category && catData.hasOwnProperty(r.category) && Number(r.amount) > 0) {
-                                catData[r.category].push({ month: mNum, item: r.item || '내역 없음', amount: Number(r.amount) || 0 });
-                            }
-                        });
-                    });
-                }
-            });
-            Object.values(catData).forEach(arr => arr.sort((a, b) => a.month - b.month));
+        function renderCategoryChart() {
             document.getElementById('chartCanvasWrap').style.display = 'none';
-            document.getElementById('chartLegend').innerHTML = '';
-            let html = '<div style="width: 100%; max-height: 400px; overflow-y: auto; text-align: left; padding: 10px 8px; box-sizing: border-box;">';
-            let hasData = false;
-            Object.keys(catData).forEach(cat => {
-                const items = catData[cat];
-                if (items.length > 0) {
-                    hasData = true;
-                    html += `<div style="margin-bottom: 18px;">
-                        <div style="font-weight: 800; color: var(--primary); font-size: 15px; margin-bottom: 8px; border-bottom: 2px solid #e9ecef; padding-bottom: 4px;">ㅁ ${escapeHtml(cat)}</div>`;
-                    items.forEach(it => {
-                        html += `<div style="display: flex; justify-content: space-between; margin-bottom: 6px; padding-left: 6px; font-size: 14px; align-items: flex-start;">
-                            <span style="color: var(--text); flex: 1; margin-right: 12px; line-height: 1.4; word-break: keep-all;">
-                                <strong>${it.month}월</strong> ${escapeHtml(it.item)}
-                            </span>
-                            <span style="font-weight: 700; color: var(--text); flex-shrink: 0; line-height: 1.4;">
-                                ${it.amount.toLocaleString()}원
-                            </span>
-                        </div>`;
-                    });
-                    html += `</div>`;
-                }
-            });
-            if (!hasData) html += `<div style="text-align:center;color:var(--text-sub);padding:40px 0;">항목별 내역이 없습니다.</div>`;
-            html += '</div>';
-            document.getElementById('chartLegend').innerHTML = html;
+            const summary = getAmountSummary(reportPeriod, reportSection, reportGrouping);
+            const periodLabel = reportSection === 'assets' ? '현재 전체 자산' : reportPeriod === 'year' ? `${currentMonth.slice(0, 4)}년 전체` : `${currentMonth.slice(0, 4)}년 ${Number(currentMonth.slice(5))}월`;
+            const sectionLabel = { expense: '지출', income: '수입', assets: '자산' }[reportSection];
+            const option = (value, label, selected) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`;
+            document.getElementById('chartLegend').innerHTML = `<div class="amount-report">
+                <div class="report-controls">
+                    <label>조회 기간<select aria-label="항목별 조회 기간" onchange="updateAmountReport('period',this.value)" ${reportSection === 'assets' ? 'disabled' : ''}>${option('month', '선택 월', reportPeriod)}${option('year', '선택 연도', reportPeriod)}</select></label>
+                    <label>내역 구분<select aria-label="항목별 내역 구분" onchange="updateAmountReport('section',this.value)">${option('expense', '지출', reportSection)}${option('income', '수입', reportSection)}${option('assets', '유동자산', reportSection)}</select></label>
+                    <label>묶음 기준<select aria-label="항목별 묶음 기준" onchange="updateAmountReport('grouping',this.value)">${option('category', '분류별', reportGrouping)}${option('item', '항목명별', reportGrouping)}</select></label>
+                </div>
+                <div class="report-total"><span>${periodLabel} ${sectionLabel}<small class="report-hint"> · ${summary.count}건</small></span><strong>${summary.total.toLocaleString()}원</strong></div>
+                <p class="report-hint">항목을 누르면 상세 내역이 펼쳐집니다. 미분류와 음수 금액(환불)도 합계에 포함됩니다.${reportSection === 'assets' ? ' 자산은 월별 누적이 아닌 현재 잔액입니다.' : ''}</p>
+                ${summary.groups.map(group => `<details class="amount-group">
+                    <summary class="amount-summary-row"><span>${escapeHtml(group.name)}<small>${group.count}건</small></span><strong>${group.amount.toLocaleString()}원</strong></summary>
+                    ${group.entries.map(entry => `<div class="amount-summary-row amount-entry"><span>${escapeHtml(entry.item)}<small>${entry.month ? `${Number(entry.month.slice(5))}월 · ` : ''}${escapeHtml(entry.section)} · ${escapeHtml(entry.category)}</small></span><strong>${entry.amount.toLocaleString()}원</strong></div>`).join('')}
+                </details>`).join('') || '<div class="empty-state">선택한 기간에 입력한 내역이 없습니다.</div>'}
+            </div>`;
         }
         function renderBudgetChart(ctx, year) {
-            const yb = currentData.budgets[year] || []; const lb = [], bd = [], sd = []; const sm = {}; yb.forEach(b => sm[b.name] = 0);
-            Object.keys(currentData.months).forEach(mk => {
-                if (isMonthInYear(mk, year)) {
-                    const md = currentData.months[mk];
-                    ['variable', 'personal', 'common'].forEach(s => { (md[s] || []).forEach(r => { if (r.category && sm.hasOwnProperty(r.category)) sm[r.category] += (Number(r.amount) || 0); }); });
-                }
-            });
+            const yb = currentData.budgets[year] || []; const lb = [], bd = [], sd = []; const sm = getSpentMap(year);
             yb.forEach(b => { lb.push(b.name); bd.push(b.amount || 0); sd.push(sm[b.name] || 0); });
             document.getElementById('chartCanvasWrap').className = 'chart-canvas-wrap';
             document.getElementById('chartLegend').innerHTML = '';
