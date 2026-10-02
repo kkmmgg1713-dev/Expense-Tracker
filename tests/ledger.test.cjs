@@ -149,6 +149,77 @@ test('typing names does not replace the input DOM before its next click', () => 
     assert.equal(a.element('tab-detail').innerHTML, 'preserve-active-editor');
 });
 
+async function syncedApp() {
+    const a = app();
+    a.run(`currentData.months[currentMonth].variable=[{id:'a',item:'점심',category:'식비',amount:20}];
+        render(); normalizeLedgerData();
+        const initialRemote=cloneData(currentData);
+        firebaseServices={db:{},doc:()=>({}),getDoc:async()=>({exists:()=>true}),
+            onSnapshot:(ref,callback)=>{globalThis.receiveCloud=callback; return ()=>{};}};`);
+    await a.run("startLedgerSync({uid:'test'});");
+    a.run("receiveCloud({exists:()=>true,data:()=>({data:initialRemote})});");
+    return a;
+}
+
+test('unchanged cloud acknowledgements do not replace the detail DOM', async () => {
+    const a = await syncedApp();
+    a.element('tab-detail').innerHTML = 'existing-inputs';
+    a.run('document.activeElement={matches:()=>true};');
+    a.run("receiveCloud({exists:()=>true,data:()=>({data:cloneData(currentData)})});");
+    assert.equal(a.element('tab-detail').innerHTML, 'existing-inputs');
+    assert.equal(a.run('pendingCloudUpdates.length'), 0);
+});
+
+test('remote row changes wait for editing to end and preserve edits against the original row', async () => {
+    const a = await syncedApp();
+    a.element('tab-detail').innerHTML = 'open-dropdown';
+    a.run(`document.activeElement={matches:()=>true};
+        const remoteEdit=cloneData(currentData);
+        remoteEdit.months[currentMonth].variable.unshift({id:'b',item:'추가',amount:5});
+        remoteEdit.months[currentMonth].variable[1].amount=30;
+        receiveCloud({exists:()=>true,data:()=>({data:remoteEdit})});
+        updateData('variable',0,'category','생활/쇼핑');
+        flushPendingCloudUpdates();`);
+    assert.equal(a.element('tab-detail').innerHTML, 'open-dropdown');
+    assert.equal(a.run('currentData.months[currentMonth].variable[0].id'), 'a');
+    a.run('document.activeElement=null; flushPendingCloudUpdates();');
+    const rows = a.json('currentData.months[currentMonth].variable');
+    assert.equal(rows.find(r => r.id === 'a').category, '생활/쇼핑');
+    assert.equal(rows.find(r => r.id === 'a').amount, 30);
+    assert.equal(rows.find(r => r.id === 'b').item, '추가');
+    assert.notEqual(a.element('tab-detail').innerHTML, 'open-dropdown');
+});
+
+test('cloud updates wait through pointer transitions and open modals, and are discarded on logout', () => {
+    const a = app();
+    a.run(`let updates=0; editorPointerDown=true; applyCloudUpdateWhenIdle(()=>updates++);
+        flushPendingCloudUpdates();`);
+    assert.equal(a.run('updates'), 0);
+    a.run(`editorPointerDown=false; document.querySelector=()=>({}); flushPendingCloudUpdates();`);
+    assert.equal(a.run('updates'), 0);
+    a.run('stopLedgerSync(); document.querySelector=()=>null; flushPendingCloudUpdates();');
+    assert.equal(a.run('updates'), 0);
+    assert.equal(a.run('pendingCloudUpdates.length'), 0);
+});
+
+test('transaction merges wait for the active text editor and retain subsequent typing', async () => {
+    const a = await syncedApp();
+    a.run(`document.activeElement={matches:()=>true}; localDataDirty=true;
+        const transactionRemote=cloneData(currentData);
+        transactionRemote.months[currentMonth].variable[0].amount=90;
+        firebaseServices.serverTimestamp=()=>0;
+        firebaseServices.runTransaction=async(db,callback)=>callback({
+            get:async()=>({exists:()=>true,data:()=>({data:transactionRemote})}), set:()=>{}});`);
+    a.element('tab-detail').innerHTML = 'active-text-editor';
+    await a.run('saveCloudData();');
+    assert.equal(a.element('tab-detail').innerHTML, 'active-text-editor');
+    assert.equal(a.run('currentData.months[currentMonth].variable[0].amount'), 20);
+    a.run(`updateData('variable',0,'item','점심 식사',true);
+        document.activeElement=null; flushPendingCloudUpdates();`);
+    assert.equal(a.run('currentData.months[currentMonth].variable[0].amount'), 90);
+    assert.equal(a.run('currentData.months[currentMonth].variable[0].item'), '점심 식사');
+});
+
 test('changing months refreshes an already open report', () => {
     const a = app();
     a.element('tab-chart').classList.add('active');

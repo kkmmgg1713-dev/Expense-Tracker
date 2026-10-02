@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <link rel="stylesheet" href="./styles.css?v=8">
+    <link rel="stylesheet" href="./styles.css?v=9">
 </head>
 
 <body>
@@ -200,7 +200,7 @@
                 </select>
                 <div class="recurring-two-col">
                     <input type="text" id="recItem" placeholder="항목명">
-                    <select id="recCategory" onfocus="populateRecCat()">
+                    <select id="recCategory">
                         <option value="">카테고리(선택)</option>
                     </select>
                 </div>
@@ -356,6 +356,8 @@
         let localDataDirty = false;
         let syncSession = 0;
         let cloudSaveInFlight = null;
+        const pendingCloudUpdates = [];
+        let editorPointerDown = false;
         const SECTIONS = ['income', 'variable', 'personal', 'common'];
         const SEC_LABELS = { income: '수입', variable: '지출-변동비', personal: '지출-개인고정비', common: '지출-공통고정비' };
         const SEC_CONFIGS = [
@@ -718,8 +720,29 @@
             await firebaseServices.signOut(firebaseServices.auth);
         }
 
+        // Keep both the DOM and its row indexes stable while a control is in use.
+        function isEditorActive() {
+            return editorPointerDown || !!document.activeElement?.matches('input, select, textarea, [contenteditable="true"]')
+                || !!document.querySelector('.modal-overlay.active, .numpad-overlay.active');
+        }
+        function applyCloudUpdateWhenIdle(update) {
+            if (isEditorActive() || pendingCloudUpdates.length) pendingCloudUpdates.push(update);
+            else update();
+        }
+        function flushPendingCloudUpdates() {
+            if (isEditorActive()) return;
+            while (pendingCloudUpdates.length) pendingCloudUpdates.shift()();
+            if (localDataDirty) queueCloudSave();
+        }
+        function scheduleCloudUiUpdate() { setTimeout(flushPendingCloudUpdates, 0); }
+        document.addEventListener('pointerdown', () => { editorPointerDown = true; }, true);
+        document.addEventListener('pointerup', () => { editorPointerDown = false; scheduleCloudUiUpdate(); }, true);
+        document.addEventListener('pointercancel', () => { editorPointerDown = false; scheduleCloudUiUpdate(); }, true);
+        document.addEventListener('focusout', scheduleCloudUiUpdate);
+
         function stopLedgerSync() {
             syncSession++;
+            pendingCloudUpdates.length = 0;
             cloudSaveInFlight = null;
             if (unsubscribeLedger) {
                 unsubscribeLedger();
@@ -767,17 +790,24 @@
                     const payload = snapshot.data() || {};
                     if (cloudBooted && cloudSaveInFlight === session && payload.updatedBy === SYNC_CLIENT_ID) return;
                     const remote = normalizedCopy(payload.data && typeof payload.data === 'object' ? payload.data : createDefaultLedgerData());
-                    const hadLocalChanges = cloudBooted && localDataDirty;
-                    currentData = hadLocalChanges ? mergeLedgerData(lastSyncedData, currentData, remote) : remote;
-                    normalizeLedgerData();
-                    lastSyncedData = cloneData(remote);
-                    writeLocalLedgerBackup();
-                    setAppVisible(true);
-                    setAuthUi('signed-in', currentUser, `실시간 동기화 중입니다. 계정: ${getUserSyncLabel(currentUser)} / 수신 ${getSyncTimeText()}`);
-                    initCurrentView(!cloudBooted);
-                    cloudBooted = true;
-                    localDataDirty = !sameData(currentData, remote);
-                    if (localDataDirty) queueCloudSave();
+                    const applySnapshot = () => {
+                        if (session !== syncSession) return;
+                        const previousData = cloneData(currentData);
+                        const hadLocalChanges = cloudBooted && localDataDirty;
+                        currentData = hadLocalChanges ? mergeLedgerData(lastSyncedData, currentData, remote) : remote;
+                        normalizeLedgerData();
+                        lastSyncedData = cloneData(remote);
+                        writeLocalLedgerBackup();
+                        setAppVisible(true);
+                        setAuthUi('signed-in', currentUser, `실시간 동기화 중입니다. 계정: ${getUserSyncLabel(currentUser)} / 수신 ${getSyncTimeText()}`);
+                        // A save acknowledgement with unchanged data must not replace inputs.
+                        if (!cloudBooted || !sameData(previousData, currentData)) initCurrentView(!cloudBooted);
+                        cloudBooted = true;
+                        localDataDirty = !sameData(currentData, remote);
+                        if (localDataDirty) queueCloudSave();
+                    };
+                    if (cloudBooted && sameData(remote, currentData) && !pendingCloudUpdates.length) applySnapshot();
+                    else applyCloudUpdateWhenIdle(applySnapshot);
                 }, err => {
                     if (session !== syncSession) return;
                     console.error('Ledger sync failed', err);
@@ -802,6 +832,8 @@
 
         async function saveCloudData() {
             if (!cloudSyncEnabled || !cloudBooted || !firebaseServices || !currentUser || cloudSaveInFlight !== null) return;
+            // Apply queued remote changes before taking the next merge baseline.
+            if (pendingCloudUpdates.length) return;
             if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
             cloudSaveTimer = null;
             const session = syncSession;
@@ -826,12 +858,19 @@
                     }, { merge: true });
                 });
                 if (session !== syncSession) return;
-                const latestLocal = cloneData(currentData);
-                currentData = normalizedCopy(mergeLedgerData(localSnapshot, latestLocal, committedData));
-                lastSyncedData = cloneData(committedData);
-                localDataDirty = !sameData(currentData, committedData);
-                writeLocalLedgerBackup();
-                if (!sameData(currentData, latestLocal)) render();
+                const finishSave = () => {
+                    if (session !== syncSession) return;
+                    const latestLocal = cloneData(currentData);
+                    currentData = normalizedCopy(mergeLedgerData(localSnapshot, latestLocal, committedData));
+                    lastSyncedData = cloneData(committedData);
+                    localDataDirty = !sameData(currentData, committedData);
+                    writeLocalLedgerBackup();
+                    if (!sameData(currentData, latestLocal)) render();
+                };
+                // Ordinary acknowledgements can finish immediately, even while typing.
+                const merged = normalizedCopy(mergeLedgerData(localSnapshot, currentData, committedData));
+                if (sameData(merged, currentData) && !pendingCloudUpdates.length) finishSave();
+                else applyCloudUpdateWhenIdle(finishSave);
                 succeeded = true;
                 setAuthUi('signed-in', currentUser, `클라우드 저장 완료 ${getSyncTimeText()} / 계정: ${getUserSyncLabel(currentUser)}`);
             } catch (err) {
@@ -1441,6 +1480,7 @@
             modal.classList.remove('active');
             if (modalReturnFocus && typeof modalReturnFocus.focus === 'function') modalReturnFocus.focus();
             modalReturnFocus = null;
+            scheduleCloudUiUpdate();
         }
 
         // Numpad
@@ -1460,6 +1500,7 @@
             numpadInputRef = null;
             if (modalReturnFocus && typeof modalReturnFocus.focus === 'function') modalReturnFocus.focus();
             modalReturnFocus = null;
+            scheduleCloudUiUpdate();
         }
         function numpadInput(v) {
             if (!/^\d$/.test(v)) return;
