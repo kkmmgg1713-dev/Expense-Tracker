@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <link rel="stylesheet" href="./styles.css?v=7">
+    <link rel="stylesheet" href="./styles.css?v=8">
 </head>
 
 <body>
@@ -32,8 +32,13 @@
         </button>
     </div>
 
-    <div class="auth-panel" id="authPanel" data-state="loading">
-        <div>
+    <details class="auth-panel" id="authPanel" data-state="loading" open>
+        <summary class="auth-toggle">
+            <span>로그인 정보</span>
+            <span class="auth-toggle-hint"><span class="auth-expand-label">펼치기</span><span class="auth-collapse-label">접기</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+        </summary>
+        <div class="auth-content">
+        <div class="auth-info">
             <div class="auth-title" id="authTitle">로그인 확인 중</div>
             <div class="auth-status" id="authStatus">Firebase 연결을 준비하고 있습니다.</div>
         </div>
@@ -41,7 +46,8 @@
             <button class="auth-btn auth-login" id="loginBtn" onclick="loginWithGoogle()" hidden>Google 로그인</button>
             <button class="auth-btn auth-logout" id="logoutBtn" onclick="logoutFirebase()" hidden>로그아웃</button>
         </div>
-    </div>
+        </div>
+    </details>
 
     <!-- Month Selector -->
     <div class="month-selector">
