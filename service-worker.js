@@ -1,8 +1,8 @@
-const CACHE_NAME = 'smart-ledger-pwa-v9';
+const CACHE_NAME = 'smart-ledger-pwa-v10';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=9',
+  './styles.css?v=10',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',

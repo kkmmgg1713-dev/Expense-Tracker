@@ -158,6 +158,15 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .row-fields.no-category { grid-template-columns: minmax(0, 1fr); }
 .row-amount-line { display: flex; align-items: center; gap: 6px; }
 #tab-detail .row-amount-line > input { min-width: 0; flex: 1; font-size: 14px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; background: #fff; }
+/* CSS-only highlighting keeps focused inputs and open dropdowns intact. */
+#tab-detail .row-amount-line > input.amount-zero {
+    color: #85520f; border-color: #d9a441; background: #fff7df;
+    animation: zero-amount-glow 2.4s ease-in-out infinite;
+}
+@keyframes zero-amount-glow {
+    0%, 100% { background-color: #fffaf0; box-shadow: 0 0 0 1px rgb(217 164 65 / 12%); }
+    50% { background-color: #ffedb5; box-shadow: 0 0 0 2px rgb(217 164 65 / 35%), 0 0 8px rgb(217 164 65 / 24%); }
+}
 .row-menu-btn[aria-expanded='true'] { color: var(--primary); background: var(--primary-soft); }
 .row-more-actions { display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; background: #f5f8f6; padding: 8px; border-radius: 12px; }
 .row-more-actions.show { display: grid; }

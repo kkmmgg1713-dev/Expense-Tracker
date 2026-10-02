@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <link rel="stylesheet" href="./styles.css?v=9">
+    <link rel="stylesheet" href="./styles.css?v=10">
 </head>
 
 <body>
@@ -1100,7 +1100,7 @@
                             </select>`: ''}
                         </div>
                         <div class="row-amount-line">
-                            <input type="text" value="${(row.amount || 0).toLocaleString()}" aria-label="${escapeHtml(conf.title)} ${i + 1}번 금액" readonly onclick="openNumpad(this)" onchange="updateData('${conf.id}',${i},'amount',this.value)">
+                            <input type="text" class="${Number(row.amount || 0) === 0 ? 'amount-zero' : ''}" value="${(row.amount || 0).toLocaleString()}" aria-label="${escapeHtml(conf.title)} ${i + 1}번 금액" ${Number(row.amount || 0) === 0 ? 'title="금액이 0원인 항목입니다."' : ''} readonly onclick="openNumpad(this)" onchange="updateData('${conf.id}',${i},'amount',this.value)">
                             <button class="row-icon-btn" onclick="openCalculator(this.previousElementSibling)" aria-label="계산기 열기"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"></rect><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"></path></svg></button>
                             <button class="row-icon-btn row-menu-btn" onclick="toggleRowActions('${conf.id}',${i})" aria-label="내역 작업 열기" aria-controls="actions-${conf.id}-${i}" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01" style="stroke-width:3"></path></svg></button>
                         </div>
@@ -1181,7 +1181,7 @@
                             <input type="text" value="${escapeHtml(row.category || '')}" placeholder="자산구분" style="text-align:left" oninput="updateData('assets',${i},'category',this.value,true)" onchange="updateData('assets',${i},'category',this.value)">
                         </div>
                         <div class="row-amount-line">
-                            <input type="text" value="${(row.amount || 0).toLocaleString()}" readonly onclick="openNumpad(this)" onchange="updateData('assets',${i},'amount',this.value)">
+                            <input type="text" class="${Number(row.amount || 0) === 0 ? 'amount-zero' : ''}" value="${(row.amount || 0).toLocaleString()}" aria-label="유동자산 ${i + 1}번 금액" ${Number(row.amount || 0) === 0 ? 'title="금액이 0원인 항목입니다."' : ''} readonly onclick="openNumpad(this)" onchange="updateData('assets',${i},'amount',this.value)">
                             <button class="row-icon-btn" onclick="openCalculator(this.previousElementSibling)" aria-label="계산기 열기"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"></rect><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"></path></svg></button>
                             <button class="row-icon-btn row-menu-btn" onclick="toggleRowActions('assets',${i})" aria-label="자산 작업 열기" aria-controls="actions-assets-${i}" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01" style="stroke-width:3"></path></svg></button>
                         </div>
